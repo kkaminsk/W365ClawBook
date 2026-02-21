@@ -238,6 +238,8 @@ No manual setup. No "run this script first." No waiting for Intune to push 15 ap
 
 The solution spans four layers: infrastructure definition, image build, Windows 365 ingestion, and post-provisioning configuration.
 
+![End-to-End Architecture](./Graphics/chapter2.png)
+
 ```mermaid
 graph TB
     subgraph "Source Control (Git)"
@@ -422,6 +424,8 @@ Any tool that expects a user context (WinGet's App Installer dependency, VS Code
 | OpenClaw config hydration | First login | User context | Active Setup registry entry |
 | Skill + MCP config hydration | First login | User context | Active Setup (copies to user profile) |
 | GitHub Desktop application | First login | User context | Machine-wide MSI provisioner |
+
+![Image Build vs Post-Provisioning Split](./Graphics/Chapter3.png)
 
 ### The "Dormant and Ready" Philosophy
 
@@ -725,6 +729,8 @@ terraform/
 ### Module Design
 
 The solution uses three modules, each with a single responsibility:
+
+![Terraform Module Design](./Graphics/Chapter6.png)
 
 ```mermaid
 graph LR
@@ -1700,6 +1706,8 @@ terraform apply tfplan
 
 The `terraform apply` creates all resources and triggers the AIB build in a single operation. The build proceeds through these stages:
 
+![Build Pipeline Phases](./Graphics/Chapter14.png)
+
 ```mermaid
 graph TD
     A[terraform apply] --> B[Create Resource Group]
@@ -1821,6 +1829,8 @@ When you publish a new image version, set `excludeFromLatest=true` initially. Th
 > **💡 Tip:** Windows 365 does not auto-consume the "latest" version from your gallery. When you import a custom image in Intune, you manually select a specific version. The `excludeFromLatest` flag doesn't prevent Windows 365 from seeing the version; it's a gallery-level governance signal for your team.
 
 ### The Staged Rollout Workflow
+
+![Staged Rollout](./Graphics/Chapter16.png)
 
 ```mermaid
 graph LR
@@ -2081,6 +2091,8 @@ The manual `terraform apply` workflow described in this book works well for smal
 This section outlines how to move the image build into a CI/CD pipeline. The core Terraform and PowerShell scripts don't change; what changes is *who runs them* and *what triggers them*.
 
 ### Pipeline Architecture
+
+![CI/CD Pipeline](./Graphics/Chapter21.png)
 
 ```mermaid
 graph LR
@@ -2519,6 +2531,8 @@ When deployed on Windows 365 Cloud PCs, these agents operate behind the corporat
 | **Network Exposure** | Outbound API calls only | WebSocket server, REST API |
 | **Primary Threat** | Prompt injection → shell execution | Supply chain → malware delivery |
 
+![Agent Threat Model](./Graphics/Chapter26.png)
+
 **Claude Code** represents the "governed" approach. It operates in a reactive mode, analyzing codebases and suggesting changes that require user confirmation. Its reliance on the host OS shell introduces specific Windows vulnerabilities (WebDAV bypass, environment variable exposure), but its permission system provides meaningful defense-in-depth.
 
 **OpenClaw** represents the "autonomous" approach. It runs as a persistent background service with long-term memory, community-driven skills, and multi-channel integration. Its reliance on the uncurated ClawHub marketplace makes it a high-risk asset requiring Zero Trust deployment.
@@ -2539,24 +2553,23 @@ Running autonomous agents under the primary user's interactive identity (e.g., `
 
 ### The Recommended Architecture
 
+![Identity Architecture](./Graphics/Chapter27.png)
+
 ```mermaid
-graph TB
-    subgraph "Primary User Identity"
-        USER[kevin@bighatgroup.com<br/>Full M365 License<br/>Email, Teams, SharePoint]
+graph LR
+    subgraph Identities
+        USER["kevin@bighatgroup.com\nFull M365 License"]
+        AGENT["agent-claude-devteam@\nEntra ID P1 Only"]
     end
 
-    subgraph "Agent Identity (Secondary User)"
-        AGENT[agent-claude-devteam@bighatgroup.com<br/>Minimal License (Entra ID P1)<br/>Git Repos Only]
+    subgraph Cloud PC
+        LOGIN["Developer Session\n(Email, Teams, SharePoint)"]
+        RUNAS["Agent Process\n(Git Repos Only)"]
     end
 
-    subgraph "Cloud PC"
-        LOGIN[Developer logs in as primary user]
-        RUNAS[Runs agent process via<br/>RunAs with agent identity]
-    end
-
-    USER --> LOGIN
-    AGENT --> RUNAS
-    LOGIN --> RUNAS
+    USER -->|signs in| LOGIN
+    AGENT -->|RunAs| RUNAS
+    LOGIN -->|launches| RUNAS
 ```
 
 ### Identity Options
