@@ -238,6 +238,8 @@ No manual setup. No "run this script first." No waiting for Intune to push 15 ap
 
 The solution spans four layers: infrastructure definition, image build, Windows 365 ingestion, and post-provisioning configuration.
 
+![End-to-End Architecture](./Graphics/chapter2.png)
+
 ```mermaid
 graph TB
     subgraph "Source Control (Git)"
@@ -280,8 +282,6 @@ graph TB
     CPC --> INTUNE
     CPC --> LOGIN
 ```
-
-![End-to-End Architecture](./Graphics/chapter2.png)
 
 ### The Four Layers
 
@@ -730,6 +730,8 @@ terraform/
 
 The solution uses three modules, each with a single responsibility:
 
+![Terraform Module Design](./Graphics/Chapter6.png)
+
 ```mermaid
 graph LR
     ROOT[main.tf<br/>Root Module] --> GAL[modules/gallery<br/>ACG + Image Definition]
@@ -740,8 +742,6 @@ graph LR
     GAL -->|image_definition_id| AIB
     ID -->|managed_identity_id| AIB
 ```
-
-![Terraform Module Design](./Graphics/Chapter6.png)
 
 **Gallery Module** creates the Azure Compute Gallery and image definition with all five Windows 365 feature flags. Both resources have `lifecycle { prevent_destroy = true }` to prevent accidental deletion.
 
@@ -1706,6 +1706,8 @@ terraform apply tfplan
 
 The `terraform apply` creates all resources and triggers the AIB build in a single operation. The build proceeds through these stages:
 
+![Build Pipeline Phases](./Graphics/Chapter14.png)
+
 ```mermaid
 graph TD
     A[terraform apply] --> B[Create Resource Group]
@@ -1725,8 +1727,6 @@ graph TD
     O --> P[Publish to ACG]
     P --> Q[Build Complete]
 ```
-
-![Build Pipeline Phases](./Graphics/Chapter14.png)
 
 ### Expected Timelines
 
@@ -1830,6 +1830,8 @@ When you publish a new image version, set `excludeFromLatest=true` initially. Th
 
 ### The Staged Rollout Workflow
 
+![Staged Rollout](./Graphics/Chapter16.png)
+
 ```mermaid
 graph LR
     BUILD[Build v1.1.0<br/>excludeFromLatest=true] --> IMPORT[Import to Intune]
@@ -1838,8 +1840,6 @@ graph LR
     TEST --> PROMOTE[Promote:<br/>excludeFromLatest=false]
     PROMOTE --> PROD[Update Production<br/>Provisioning Policy]
 ```
-
-![Staged Rollout](./Graphics/Chapter16.png)
 
 ```powershell
 # Step 1: Build the canary version
@@ -2092,6 +2092,8 @@ This section outlines how to move the image build into a CI/CD pipeline. The cor
 
 ### Pipeline Architecture
 
+![CI/CD Pipeline](./Graphics/Chapter21.png)
+
 ```mermaid
 graph LR
     PR[PR: Bump versions<br/>in terraform.tfvars] --> REVIEW[Code Review]
@@ -2103,8 +2105,6 @@ graph LR
     VERIFY --> TEARDOWN[Teardown Build Resources]
     TEARDOWN --> NOTIFY[Notify: Image ready<br/>for Intune import]
 ```
-
-![CI/CD Pipeline](./Graphics/Chapter21.png)
 
 ### Key Design Decisions
 
@@ -2553,6 +2553,8 @@ Running autonomous agents under the primary user's interactive identity (e.g., `
 
 ### The Recommended Architecture
 
+![Identity Architecture](./Graphics/Chapter27.png)
+
 ```mermaid
 graph TB
     subgraph "Primary User Identity"
@@ -2572,8 +2574,6 @@ graph TB
     AGENT --> RUNAS
     LOGIN --> RUNAS
 ```
-
-![Identity Architecture](./Graphics/Chapter27.png)
 
 ### Identity Options
 
