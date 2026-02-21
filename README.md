@@ -1,4 +1,6 @@
-# Deploying OpenClaw with Windows 365: A Practitioner's Guide to Custom Image Engineering
+![](.\Graphics\Title.png)
+
+# Deploying OpenClaw with Windows 365: A Practitioner's Guide to Custom Image Engineering and Deployment
 
 **Author:** Kevin Kaminski, Microsoft MVP for Windows 365
 
