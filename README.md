@@ -418,7 +418,7 @@ Any tool that expects a user context (WinGet's App Installer dependency, VS Code
 | MCP server binaries | Image build | Local System | `npm install -g` or file copy |
 | MCP server configuration | Image build | Local System | Template in ProgramData |
 | API keys and credentials | Post-provisioning | Machine (Intune) | Environment variables via Settings Catalog |
-| VS Code extensions | Post-provisioning | User context | Intune script or logon script |
+| VS Code extensions | Post-provisioning | User context | Intune script |
 | OpenClaw config hydration | First login | User context | Active Setup registry entry |
 | Skill + MCP config hydration | First login | User context | Active Setup (copies to user profile) |
 | GitHub Desktop application | First login | User context | Machine-wide MSI provisioner |
