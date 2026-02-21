@@ -2556,23 +2556,20 @@ Running autonomous agents under the primary user's interactive identity (e.g., `
 ![Identity Architecture](./Graphics/Chapter27.png)
 
 ```mermaid
-graph TB
-    subgraph "Primary User Identity"
-        USER[kevin@bighatgroup.com<br/>Full M365 License<br/>Email, Teams, SharePoint]
+graph LR
+    subgraph Identities
+        USER["kevin@bighatgroup.com\nFull M365 License"]
+        AGENT["agent-claude-devteam@\nEntra ID P1 Only"]
     end
 
-    subgraph "Agent Identity (Secondary User)"
-        AGENT[agent-claude-devteam@bighatgroup.com<br/>Minimal License (Entra ID P1)<br/>Git Repos Only]
+    subgraph Cloud PC
+        LOGIN["Developer Session\n(Email, Teams, SharePoint)"]
+        RUNAS["Agent Process\n(Git Repos Only)"]
     end
 
-    subgraph "Cloud PC"
-        LOGIN[Developer logs in as primary user]
-        RUNAS[Runs agent process via<br/>RunAs with agent identity]
-    end
-
-    USER --> LOGIN
-    AGENT --> RUNAS
-    LOGIN --> RUNAS
+    USER -->|signs in| LOGIN
+    AGENT -->|RunAs| RUNAS
+    LOGIN -->|launches| RUNAS
 ```
 
 ### Identity Options
