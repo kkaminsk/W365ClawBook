@@ -281,6 +281,8 @@ graph TB
     CPC --> LOGIN
 ```
 
+![End-to-End Architecture](./Graphics/chapter2.png)
+
 ### The Four Layers
 
 **Layer 1: Source Control.** All infrastructure and build logic lives in Git. The Terraform configuration defines the Azure Compute Gallery, managed identity, RBAC assignments, and AIB template. The build scripts are inline PowerShell within the Terraform HCL, with no external storage account or blob dependencies. Changes are tracked, reviewed, and versioned.
@@ -422,6 +424,8 @@ Any tool that expects a user context (WinGet's App Installer dependency, VS Code
 | OpenClaw config hydration | First login | User context | Active Setup registry entry |
 | Skill + MCP config hydration | First login | User context | Active Setup (copies to user profile) |
 | GitHub Desktop application | First login | User context | Machine-wide MSI provisioner |
+
+![Image Build vs Post-Provisioning Split](./Graphics/Chapter3.png)
 
 ### The "Dormant and Ready" Philosophy
 
@@ -736,6 +740,8 @@ graph LR
     GAL -->|image_definition_id| AIB
     ID -->|managed_identity_id| AIB
 ```
+
+![Terraform Module Design](./Graphics/Chapter6.png)
 
 **Gallery Module** creates the Azure Compute Gallery and image definition with all five Windows 365 feature flags. Both resources have `lifecycle { prevent_destroy = true }` to prevent accidental deletion.
 
@@ -1720,6 +1726,8 @@ graph TD
     P --> Q[Build Complete]
 ```
 
+![Build Pipeline Phases](./Graphics/Chapter14.png)
+
 ### Expected Timelines
 
 | Phase | Duration |
@@ -1830,6 +1838,8 @@ graph LR
     TEST --> PROMOTE[Promote:<br/>excludeFromLatest=false]
     PROMOTE --> PROD[Update Production<br/>Provisioning Policy]
 ```
+
+![Staged Rollout](./Graphics/Chapter16.png)
 
 ```powershell
 # Step 1: Build the canary version
@@ -2093,6 +2103,8 @@ graph LR
     VERIFY --> TEARDOWN[Teardown Build Resources]
     TEARDOWN --> NOTIFY[Notify: Image ready<br/>for Intune import]
 ```
+
+![CI/CD Pipeline](./Graphics/Chapter21.png)
 
 ### Key Design Decisions
 
@@ -2519,6 +2531,8 @@ When deployed on Windows 365 Cloud PCs, these agents operate behind the corporat
 | **Network Exposure** | Outbound API calls only | WebSocket server, REST API |
 | **Primary Threat** | Prompt injection → shell execution | Supply chain → malware delivery |
 
+![Agent Threat Model](./Graphics/Chapter26.png)
+
 **Claude Code** represents the "governed" approach. It operates in a reactive mode, analyzing codebases and suggesting changes that require user confirmation. Its reliance on the host OS shell introduces specific Windows vulnerabilities (WebDAV bypass, environment variable exposure), but its permission system provides meaningful defense-in-depth.
 
 **OpenClaw** represents the "autonomous" approach. It runs as a persistent background service with long-term memory, community-driven skills, and multi-channel integration. Its reliance on the uncurated ClawHub marketplace makes it a high-risk asset requiring Zero Trust deployment.
@@ -2558,6 +2572,8 @@ graph TB
     AGENT --> RUNAS
     LOGIN --> RUNAS
 ```
+
+![Identity Architecture](./Graphics/Chapter27.png)
 
 ### Identity Options
 
