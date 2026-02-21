@@ -1,4 +1,4 @@
-![](.\Graphics\Title.png)
+![](./Graphics/Title.png)
 
 # Deploying OpenClaw with Windows 365: A Practitioner's Guide to Custom Image Engineering and Deployment
 
