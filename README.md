@@ -1,4 +1,4 @@
-﻿![](./Graphics/Title.png)
+![](./Graphics/Title.png)
 
 # Deploying OpenClaw with Windows 365: A Practitioner's Guide to Custom Image Engineering and Deployment
 
@@ -167,7 +167,7 @@ Together, these capabilities mean that a Cloud PC running an AI agent is not a f
 
 #### The Economic Argument
 
-There is also a practical economic consideration. A Windows 365 Cloud PC runs on Azure compute that you pay for monthly, on a predictable per-user basis. There is no surprise bill for leaving a VM running over the weekend. There is no capacity planning for how many D4s_v5 instances your dev team needs. The licensing is simple: a Windows 365 Enterprise licence per user, sized to the workload (2 vCPU / 8 GB is sufficient for most agent workflows; 4 vCPU / 16 GB for heavy workloads).
+There is also a practical economic consideration. A Windows 365 Cloud PC runs on Azure compute that you pay for monthly, on a predictable per-user basis. There is no surprise bill for leaving a VM running over the weekend. There is no capacity planning for how many D4s_v5 instances your dev team needs. The licensing is simple: a Windows 365 Enterprise licence per user, sized to the workload (4 vCPU / 16 GB is the recommended configuration for AI agent workflows).
 
 Compared to provisioning and managing traditional Azure VMs, the operational overhead is dramatically lower. No OS disk management, no availability set configuration, no NSG rule debugging, no "who left the RDP port open" incident. The platform handles compute lifecycle; you handle the image and the policies.
 
@@ -181,19 +181,19 @@ For decision-makers evaluating the total cost, here is a representative monthly 
 
 | Component | Per-User Monthly Cost (USD) | Applies To |
 |---|---|---|
-| Microsoft 365 E3 (developer) | $36 Ã- 10 = **$360** | All options (includes Entra P1, Intune P1) |
-| Windows 365 Enterprise (2 vCPU / 8 GB, developer) | $310 Ã- 10 = **$3,100** | All options (one Cloud PC per developer) |
-| Entra ID P1 (agent account, standalone) | $6 Ã- 10 = **$60** | Option 2 (agent identity) |
-| Intune P1 (agent account, standalone) | $8 Ã- 10 = **$80** | Option 2 (agent Cloud PC management) |
-| Windows 365 Enterprise (agent Cloud PC) | $310 Ã- 10 = **$3,100** | Options 2 and 3 (second Cloud PC) |
-| Microsoft 365 E3 (agent account) | $36 Ã- 10 = **$360** | Option 3 only (replaces standalone Entra P1 + Intune P1) |
-| ACG image storage (3 versions, 1 region) | **$5â€"15** | All options |
-| AIB build compute (1 build/month, ~2 hours) | **$2â€"5** | All options |
+| Microsoft 365 E3 (developer) | $36 x 10 = **$360** | All options (includes Entra P1, Intune P1) |
+| Windows 365 Enterprise (4 vCPU / 16 GB, developer) | $66 x 10 = **$660** | All options (one Cloud PC per developer) |
+| Entra ID P1 (agent account, standalone) | $6 x 10 = **$60** | Option 2 (agent identity) |
+| Intune P1 (agent account, standalone) | $8 x 10 = **$80** | Option 2 (agent Cloud PC management) |
+| Windows 365 Enterprise (agent Cloud PC) | $66 x 10 = **$660** | Options 2 and 3 (second Cloud PC) |
+| Microsoft 365 E3 (agent account) | $36 x 10 = **$360** | Option 3 only (replaces standalone Entra P1 + Intune P1) |
+| ACG image storage (3 versions, 1 region) | **$5--15** | All options |
+| AIB build compute (1 build/month, ~2 hours) | **$2--5** | All options |
 | AI API usage | **Varies** | All options; depends on usage volume and models |
 | | | |
-| **Total (Option 1: developer's own identity)** | **~$3,480/month** | M365 E3 + W365 per developer |
-| **Total (Option 2: dedicated agent PC, minimal)** | **~$6,720/month** | Adds Entra P1 + W365 + Intune P1 per agent |
-| **Total (Option 3: dedicated agent PC, full M365)** | **~$6,940/month** | Adds W365 + M365 E3 per agent |
+| **Total (Option 1: developer's own identity)** | **~$1,040/month** | M365 E3 + W365 per developer |
+| **Total (Option 2: dedicated agent PC, minimal)** | **~$1,840/month** | Adds Entra P1 + W365 + Intune P1 per agent |
+| **Total (Option 3: dedicated agent PC, full M365)** | **~$2,060/month** | Adds W365 + M365 E3 per agent |
 
 The dominant cost is the Windows 365 licences. The image build infrastructure (ACG, AIB) is negligible. Option 2 provides full session and identity isolation at the lowest incremental cost by using the base licence stack without M365 E3. Option 3 adds M365 E3 for scenarios where the agent needs its own Microsoft 365 service access. Evaluate the trade-offs based on your threat model; Chapter 27 provides the full security rationale.
 
@@ -469,7 +469,7 @@ The objective is to produce a Windows 11 image where the AI agents are not merel
 
 Install the binaries. Inject configuration templates. Defer initialization to first login.
 
-> **âš ï¸ Warning:** Never run `openclaw onboard` or `claude login` during the image build. These commands launch interactive wizards that will hang the build until the AIB timeout kills it. More importantly, if they somehow complete, they generate unique session tokens and device identifiers that would be baked into every Cloud PC provisioned from this image, causing identity collisions and security failures.
+> **âš ï¸ Warning:** Never run `openclaw onboard` or `claude login` during the image build. These commands launch interactive wizards that will hang the build until the AIB timeout kills it. More importantly, if they somehow complete, they generate unique session tokens and device identifiers that would be baked into every Cloud PC provisioned from this image, causing identity collisions and security failures.
 
 ---
 
@@ -513,7 +513,7 @@ Before you build anything, the ACG image definition must satisfy Windows 365's c
 | `IsAcceleratedNetworkSupported` | `True` | Required for accelerated networking |
 | `IsSecureBootSupported` | `True` | Explicit Secure Boot declaration |
 
-> **âš ï¸ Warning:** Missing any one of these features will cause the import into Windows 365 to fail. This is non-negotiable. The error message from Intune is often unhelpful; if your import fails, check these features first.
+> **âš ï¸ Warning:** Missing any one of these features will cause the import into Windows 365 to fail. This is non-negotiable. The error message from Intune is often unhelpful; if your import fails, check these features first.
 
 Additionally, the image definition must declare:
 
@@ -829,7 +829,7 @@ Create the storage account and container before your first `terraform init`. Ena
 
 The code examples in this book show `backend "local" {}` for simplicity during initial learning and experimentation. When you move to team usage or CI/CD pipelines, switch to the remote backend; it's a one-line change in `versions.tf` followed by `terraform init -migrate-state`.
 
-> **âš ï¸ Warning:** The local backend offers no locking, no encryption at rest, and no audit trail. It is acceptable only for single-operator learning environments.
+> **âš ï¸ Warning:** The local backend offers no locking, no encryption at rest, and no audit trail. It is acceptable only for single-operator learning environments.
 
 ### Variables
 
@@ -915,19 +915,19 @@ The script performs three phases:
 **Phase 1: Pre-Flight Checks**: Verifies OS, admin privileges, and each prerequisite. Outputs a summary table:
 
 ```text
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   W365Claw Build Prerequisites â€" Pre-Flight Check
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
   âœ… OS                Windows Desktop (x64)
   âœ… Administrator      Running elevated
   âœ… Terraform          1.9.5 (>= 1.5.0)
   âœ… Azure CLI          2.83.0 (>= 2.60)
   âœ… Git                2.53.0 (>= 2.40)
-  âŒ Az Module          MISSING
+  âŒ Az Module          MISSING
   âœ… Azure Login        Subscription: rg-w365-images
   âœ… RP: Compute        Registered
-  âŒ RP: VMImages       NotRegistered
+  âŒ RP: VMImages       NotRegistered
   âœ… RP: Network        Registered
   âœ… RP: ManagedId      Registered
   âœ… terraform init     Initialized
@@ -1005,7 +1005,7 @@ function Update-SessionEnvironment {
 
 This function reads the Machine and User PATH values directly from the registry and reconstructs `$env:Path`. It must be called after every MSI/EXE installation that modifies the system PATH.
 
-> **âš ï¸ Warning:** Relying on a system reboot to propagate PATH changes is a common but fragile approach. Reboots within AIB builds are complex to orchestrate and add significant time. The `Update-SessionEnvironment` function gives you immediate access to newly installed binaries in the same script block.
+> **âš ï¸ Warning:** Relying on a system reboot to propagate PATH changes is a common but fragile approach. Reboots within AIB builds are complex to orchestrate and add significant time. The `Update-SessionEnvironment` function gives you immediate access to newly installed binaries in the same script block.
 
 ### Python
 
@@ -1132,7 +1132,7 @@ The critical argument is `/MERGETASKS="!runcode,addcontextmenufiles,addcontextme
 | `addcontextmenufolders` | Adds "Open with Code" to folder context menus |
 | `addtopath` | Adds `code` CLI to system PATH |
 
-> **âš ï¸ Warning:** VS Code is downloaded from the `/latest/` URL and is intentionally not version-pinned. This is a documented exception; Microsoft's auto-update redirector doesn't provide stable versioned URLs with published checksums. VS Code's own auto-update mechanism will supersede the installed version on first login anyway. See Chapter 13 for the full rationale.
+> **âš ï¸ Warning:** VS Code is downloaded from the `/latest/` URL and is intentionally not version-pinned. This is a documented exception; Microsoft's auto-update redirector doesn't provide stable versioned URLs with published checksums. VS Code's own auto-update mechanism will supersede the installed version on first login anyway. See Chapter 13 for the full rationale.
 
 ### Git for Windows
 
@@ -1222,7 +1222,7 @@ if (Test-Path $codeBin) {
 }
 ```
 
-> **âš ï¸ Warning:** VS Code extension installation during the image build installs into the **default extensions directory** which, under Local System, may resolve to the system profile. This works for extensions installed via `code.cmd --install-extension` in the System installer because VS Code's System installer uses a shared extensions location. However, for user-specific extensions, use post-provisioning delivery as discussed in Chapter 24.
+> **âš ï¸ Warning:** VS Code extension installation during the image build installs into the **default extensions directory** which, under Local System, may resolve to the system profile. This works for extensions installed via `code.cmd --install-extension` in the System installer because VS Code's System installer uses a shared extensions location. However, for user-specific extensions, use post-provisioning delivery as discussed in Chapter 24.
 
 ---
 
@@ -1416,7 +1416,7 @@ if ($LASTEXITCODE -ne 0) {
 
 **What NOT to include:** Never include skills from the public ClawHub marketplace in the image. All skills must go through your internal vetting pipeline first (see Chapter 29).
 
-> **âš ï¸ Warning:** Skills can contain executable scripts in their `scripts/` subdirectory. Every skill in the curated repository must be reviewed for data exfiltration, prompt injection, and obfuscated payloads before inclusion in the image.
+> **âš ï¸ Warning:** Skills can contain executable scripts in their `scripts/` subdirectory. Every skill in the curated repository must be reviewed for data exfiltration, prompt injection, and obfuscated payloads before inclusion in the image.
 
 ### MCP Servers
 
@@ -1528,7 +1528,7 @@ if (-not (Test-Path $teamsRegPath)) {
 Set-ItemProperty -Path $teamsRegPath -Name "IsWVDEnvironment" -Value 1 -Type DWord -Force
 ```
 
-> **âš ï¸ Warning:** Do **not** install the Teams desktop app itself. Deliver Microsoft 365 Apps (without Teams) via Intune post-provisioning. Teams should use the new Teams app delivered through its own deployment channel with media optimisation.
+> **âš ï¸ Warning:** Do **not** install the Teams desktop app itself. Deliver Microsoft 365 Apps (without Teams) via Intune post-provisioning. Teams should use the new Teams app delivered through its own deployment channel with media optimisation.
 
 ### Image Cleanup and DISM
 
@@ -1915,7 +1915,7 @@ terraform apply `
    - **Join type:** Entra join
    - **Assignment:** Target your developer security group
 
-> **âš ï¸ Warning:** The Windows 365 custom image import step in Intune remains a **manual portal operation**. There is no public Graph API or PowerShell cmdlet to automate the "Add custom image from ACG" action. Your automation pipeline ends at "image version published to ACG," and an admin picks it up from there.
+> **âš ï¸ Warning:** The Windows 365 custom image import step in Intune remains a **manual portal operation**. There is no public Graph API or PowerShell cmdlet to automate the "Add custom image from ACG" action. Your automation pipeline ends at "image version published to ACG," and an admin picks it up from there.
 
 ---
 
@@ -2363,7 +2363,7 @@ The MCP configuration template uses placeholder values (e.g., `__PERPLEXITY_API_
 
 > **ðŸ'¡ Tip:** For teams that need centralized key management in the future, consider Intune remediation scripts that read from Azure Key Vault, or a self-service portal where developers can retrieve approved API keys. The manual approach described here is the simplest starting point and avoids storing secrets in Intune configuration profiles.
 
-> **âš ï¸ Warning:** On Windows 11, user-level environment variables are stored in the registry and are readable by any process running under that user's security context. For high-value secrets, consider using Windows Credential Manager or Azure Key Vault integration.
+> **âš ï¸ Warning:** On Windows 11, user-level environment variables are stored in the registry and are readable by any process running under that user's security context. For high-value secrets, consider using Windows Credential Manager or Azure Key Vault integration.
 
 ### Configuring OpenClaw Memory Search
 
@@ -2490,7 +2490,7 @@ git clone "https://<PAT>@github.com/org/approved-agent-skills.git" $tempDir
 
 For Azure DevOps, GCM supports Azure AD-backed authentication natively, so no PAT is required if the developer (or agent identity) has appropriate project access.
 
-> **âš ï¸ Warning:** Never bake PATs into the image. They are user-specific, time-limited credentials that must be managed per-developer.
+> **âš ï¸ Warning:** Never bake PATs into the image. They are user-specific, time-limited credentials that must be managed per-developer.
 
 ```powershell
 # Runs in user context via Intune
@@ -2666,10 +2666,10 @@ The critical enabler is the **dedicated agent account** from the isolated model.
 
 | Scenario | Local Admin | Network Isolated | Dedicated Account | Risk Level |
 |----------|------------|-----------------|-------------------|------------|
-| Primary user on corporate network | âœ… | âŒ | âŒ | ðŸ"´ **Critical** â€" compromised agent has admin + corporate access + user's full identity |
-| Primary user, network isolated | âœ… | âœ… | âŒ | ðŸŸ¡ **Medium** â€" blast radius contained, but agent actions attributed to the human |
+| Primary user on corporate network | âœ… | âŒ | âŒ | ðŸ"´ **Critical** â€" compromised agent has admin + corporate access + user's full identity |
+| Primary user, network isolated | âœ… | âœ… | âŒ | ðŸŸ¡ **Medium** â€" blast radius contained, but agent actions attributed to the human |
 | Dedicated account, network isolated | âœ… | âœ… | âœ… | ðŸŸ¢ **Low** â€" contained blast radius, scoped permissions, clean audit trail |
-| Standard user, network isolated | âŒ | âœ… | âœ… | ðŸŸ¢ **Low** â€" maximum restriction, but constant friction for agent workflows |
+| Standard user, network isolated | âŒ | âœ… | âœ… | ðŸŸ¢ **Low** â€" maximum restriction, but constant friction for agent workflows |
 
 The sweet spot is **dedicated account + network isolated + local admin**. The agent can do its job without friction, the network prevents lateral movement, the dedicated identity prevents privilege inheritance from the human, and reprovisioning resets the machine to a known-good state.
 
@@ -2679,22 +2679,22 @@ Every user and every agent account requires a **minimum base licence stack of En
 
 **Option 2 (base stack, no M365 E3):** Each agent account needs:
 
-- A standalone **Entra ID P1** licence (~Â£5/user/month)
-- A standalone **Intune P1** licence (~Â£7/user/month)
-- A **Windows 365 Enterprise** licence (varies by SKU, from ~Â£25/month for 2 vCPU/4 GB to ~Â£130/month for 8 vCPU/32 GB)
+- A standalone **Entra ID P1** licence (~$6/user/month)
+- A standalone **Intune P1** licence (~$8/user/month)
+- A **Windows 365 Enterprise** licence (varies by SKU, from ~$31/month for 2 vCPU/4 GB to ~$123/month for 8 vCPU/32 GB; recommended: 4 vCPU/16 GB at $66/month)
 
 The agent account does not need M365 E3 because it has no email, Teams, SharePoint, or Office apps.
 
 **Option 3 (full M365):** Each agent account needs:
 
-- A **Microsoft 365 E3** licence (~Â£30/user/month, includes Entra P1 and Intune P1)
+- A **Microsoft 365 E3** licence (~$36/user/month, includes Entra P1 and Intune P1)
 - A **Windows 365 Enterprise** licence for the agent's own Cloud PC
 
 Option 3 is for scenarios where the agent needs to authenticate independently to Microsoft 365 services (Graph API, Teams channels, SharePoint document libraries). The incremental cost over Option 2 is the difference between standalone Entra P1 + Intune P1 and a full M365 E3 licence.
 
-For a team of 10 developers, the incremental cost of Options 2 or 3 might be Â£3,000â€"Â£15,000/year depending on the SKU. This is a rounding error compared to the cost of a security incident where a compromised agent with the developer's primary identity exfiltrates source code or accesses sensitive systems.
+For a team of 10 developers, the incremental cost of Options 2 or 3 is approximately $8,000â€"$12,000/year depending on the SKU. This is a rounding error compared to the cost of a security incident where a compromised agent with the developer's primary identity exfiltrates source code or accesses sensitive systems.
 
-> **ðŸ'¡ Tip:** If budget is a constraint, consider using a smaller Windows 365 SKU for the agent Cloud PC. The agent doesn't need 8 vCPU and 32 GB RAM; most agent workloads are I/O bound (API calls, file reads), not compute bound. A 2 vCPU/8 GB SKU is often sufficient and significantly cheaper.
+> **ðŸ'¡ Tip:** The recommended Cloud PC SKU for AI agent workloads is 4 vCPU / 16 GB ($66/user/month). While agents are primarily I/O bound (API calls, file reads), the additional headroom is needed for concurrent agent processes, npm operations, and local language server indexing. A 2 vCPU / 8 GB SKU ($41/user/month) can work for lightweight, single-agent use cases but may constrain heavier workflows.
 
 #### When Standard User Is Appropriate
 
@@ -2912,7 +2912,7 @@ Deploy via Intune Endpoint Protection profiles:
 
 ### AppLocker / WDAC
 
-> **âš ï¸ Note:** WDAC with Constrained Language Mode represents the **strictest security posture** and is appropriate only for environments with the highest security requirements. Enforcing CLM will break many developer PowerShell workflows, including custom modules, script-based build tools, and ad-hoc scripting all require Full Language Mode. Evaluate the developer workflow impact carefully before enabling CLM, and expect significant effort to produce a working WDAC policy that allows legitimate development activities while blocking malicious ones.
+> **âš ï¸ Note:** WDAC with Constrained Language Mode represents the **strictest security posture** and is appropriate only for environments with the highest security requirements. Enforcing CLM will break many developer PowerShell workflows, including custom modules, script-based build tools, and ad-hoc scripting all require Full Language Mode. Evaluate the developer workflow impact carefully before enabling CLM, and expect significant effort to produce a working WDAC policy that allows legitimate development activities while blocking malicious ones.
 
 **Windows Defender Application Control (WDAC)** (optional, strict environments only):
 - Enforce **Constrained Language Mode** for PowerShell (limits .NET API access from scripts)
@@ -3396,9 +3396,9 @@ function Test-TerraformInitialized {
 
 function Invoke-PreFlightChecks {
     Write-Host ""
-    Write-Host "â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•" -ForegroundColor Cyan
+    Write-Host "â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•" -ForegroundColor Cyan
     Write-Host "  W365Claw Build Prerequisites â€" Pre-Flight Check" -ForegroundColor Cyan
-    Write-Host "â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•" -ForegroundColor Cyan
+    Write-Host "â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•" -ForegroundColor Cyan
 
     $results = [ordered]@{}
 
@@ -3429,7 +3429,7 @@ function Invoke-PreFlightChecks {
 
     foreach ($key in $results.Keys) {
         $r = $results[$key]
-        $icon = if ($r.Status) { "âœ…" } else { "âŒ" }
+        $icon = if ($r.Status) { "âœ…" } else { "âŒ" }
         $paddedKey = $key.PadRight(20)
         if ($r.Status) {
             Write-Host "  $icon $paddedKey $($r.Detail)" -ForegroundColor Green
@@ -3566,9 +3566,9 @@ The script proceeds through six phases:
 Before writing, the script displays a formatted summary table of all values:
 
 ```text
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   Summary â€" terraform.tfvars
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
   subscription_id       = 12345678-abcd-1234-efgh-123456789012
   location              = eastus2
@@ -3645,9 +3645,9 @@ $ErrorActionPreference = "Stop"
 $TerraformDir = (Resolve-Path $TerraformDir -ErrorAction Stop).Path
 
 Write-Host ""
-Write-Host "â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•" -ForegroundColor Cyan
+Write-Host "â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•" -ForegroundColor Cyan
 Write-Host "  W365Claw â€" Targeted Build Resource Teardown" -ForegroundColor Cyan
-Write-Host "â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•" -ForegroundColor Cyan
+Write-Host "â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "This will remove:" -ForegroundColor Yellow
 Write-Host "  â€¢ AIB image template (azapi_resource.image_template)" -ForegroundColor Yellow
@@ -3848,6 +3848,7 @@ Remove-AzGalleryImageVersion `
 
 *Azure Compute Gallery integration with Windows 365 was in public preview at the time of writing. Verify the current status at [learn.microsoft.com/windows-365](https://learn.microsoft.com/windows-365/); feature behaviour may change between preview and general availability. Test thoroughly in non-production environments before adopting for production workloads.*
 
-*Â© 2026 Kevin Kaminski. This work is licensed under a [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/).*
+*(c) 2026 Kevin Kaminski. This work is licensed under a [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/).*
+
 
 
