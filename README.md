@@ -18,6 +18,34 @@ This book is designed to work both as a standalone guide and as a companion to t
 
 Several chapters include Mermaid diagrams for architecture and workflow visualization. These render natively in GitHub, VS Code, and most modern markdown viewers. If your reading environment does not support Mermaid, the diagrams are described in the surrounding text.
 
+### How to Use This Book
+
+- Read Part I if you are new to Windows 365 or custom image engineering.
+- Jump to Part II and Part III if you already run Windows 365 and need the image pipeline details.
+- Use Part IV and Part V as operational runbooks during builds and rollouts.
+- Use Part VI when you need to justify, implement, or audit security controls.
+- Keep Part VII open as a reference while executing builds.
+
+### Conventions and Notation
+
+- Commands appear in fenced code blocks and are intended to be copied as-is.
+- Paths are Windows style unless explicitly called out.
+- "Build workstation" refers to the temporary VM used for Azure VM Image Builder runs.
+- "Agent account" refers to the dedicated Entra ID identity used by the AI agent.
+- Code examples are shared with the W365Claw repository and must remain in sync.
+
+### Prerequisites and Assumptions
+
+- An Azure tenant with Windows 365 licensing and Microsoft Intune.
+- Entra ID permissions to create app registrations, managed identities, and groups.
+- Subscription-level access (Owner or Contributor) and Intune admin rights for image import and policy changes.
+- Ability to create Azure Compute Gallery resources and Azure VM Image Builder templates.
+- A trusted build workstation with outbound internet access for installer and npm package downloads.
+
+### Versioning and Drift
+
+This guide is accurate as of February 25, 2026. Microsoft services, marketplace images, and third-party tools change frequently. Verify versions, pricing, and feature status in the referenced repositories and release notes before production changes.
+
 ---
 
 ## Table of Contents
@@ -32,10 +60,10 @@ Several chapters include Mermaid diagrams for architecture and workflow visualiz
   - [Chapter 6: Terraform Solution Architecture](#chapter-6-terraform-solution-architecture)
 - [Part III: The Build Pipeline](#part-iii-the-build-pipeline)
   - [Chapter 7: Preparing the Build Workstation](#chapter-7-preparing-the-build-workstation)
-  - [Chapter 8: Phase 1 â€” Core Runtimes](#chapter-8-phase-1--core-runtimes)
-  - [Chapter 9: Phase 2 â€” Developer Tools](#chapter-9-phase-2--developer-tools)
-  - [Chapter 10: Phase 3 â€” AI Agents](#chapter-10-phase-3--ai-agents)
-  - [Chapter 11: Phase 4 â€” Configuration and Policy](#chapter-11-phase-4--configuration-and-policy)
+  - [Chapter 8: Phase 1 â€" Core Runtimes](#chapter-8-phase-1--core-runtimes)
+  - [Chapter 9: Phase 2 â€" Developer Tools](#chapter-9-phase-2--developer-tools)
+  - [Chapter 10: Phase 3 â€" AI Agents](#chapter-10-phase-3--ai-agents)
+  - [Chapter 11: Phase 4 â€" Configuration and Policy](#chapter-11-phase-4--configuration-and-policy)
   - [Chapter 12: Windows Update and Sysprep](#chapter-12-windows-update-and-sysprep)
   - [Chapter 13: Supply Chain Integrity](#chapter-13-supply-chain-integrity)
 - [Part IV: Operations](#part-iv-operations)
@@ -54,7 +82,7 @@ Several chapters include Mermaid diagrams for architecture and workflow visualiz
   - [Chapter 25: Agent Updates Without Reprovisioning](#chapter-25-agent-updates-without-reprovisioning)
 - [Part VI: Security](#part-vi-security)
   - [Chapter 26: The Agent Threat Model](#chapter-26-the-agent-threat-model)
-  - [Chapter 27: Identity Architecture â€” The Secondary User Imperative](#chapter-27-identity-architecture--the-secondary-user-imperative)
+  - [Chapter 27: Identity Architecture â€" The Secondary User Imperative](#chapter-27-identity-architecture--the-secondary-user-imperative)
   - [Chapter 28: Hardening Claude Code](#chapter-28-hardening-claude-code)
   - [Chapter 29: Hardening OpenClaw](#chapter-29-hardening-openclaw)
   - [Chapter 30: Network Segmentation](#chapter-30-network-segmentation)
@@ -62,9 +90,13 @@ Several chapters include Mermaid diagrams for architecture and workflow visualiz
   - [Chapter 32: Intune Configuration Profiles](#chapter-32-intune-configuration-profiles)
   - [Chapter 33: Monitoring and Forensics](#chapter-33-monitoring-and-forensics)
 - [Part VII: Reference](#part-vii-reference)
+  - [Chapter 34: Troubleshooting and FAQ](#chapter-34-troubleshooting-and-faq)
   - [Chapter 35: PowerShell Scripts](#chapter-35-powershell-scripts)
   - [Chapter 36: Windows 365 Image Requirements Checklist](#chapter-36-windows-365-image-requirements-checklist)
   - [Chapter 37: Component Summary Matrix](#chapter-37-component-summary-matrix)
+
+- [Appendix: Operational Quick Reference](#appendix-operational-quick-reference)
+- [Appendix: Feedback and Errata](#appendix-feedback-and-errata)
 
 ---
 
@@ -149,14 +181,14 @@ For decision-makers evaluating the total cost, here is a representative monthly 
 
 | Component | Per-User Monthly Cost (USD) | Applies To |
 |---|---|---|
-| Microsoft 365 E3 (developer) | $36 Ã— 10 = **$360** | All options (includes Entra P1, Intune P1) |
-| Windows 365 Enterprise (2 vCPU / 8 GB, developer) | $310 Ã— 10 = **$3,100** | All options (one Cloud PC per developer) |
-| Entra ID P1 (agent account, standalone) | $6 Ã— 10 = **$60** | Option 2 (agent identity) |
-| Intune P1 (agent account, standalone) | $8 Ã— 10 = **$80** | Option 2 (agent Cloud PC management) |
-| Windows 365 Enterprise (agent Cloud PC) | $310 Ã— 10 = **$3,100** | Options 2 and 3 (second Cloud PC) |
-| Microsoft 365 E3 (agent account) | $36 Ã— 10 = **$360** | Option 3 only (replaces standalone Entra P1 + Intune P1) |
-| ACG image storage (3 versions, 1 region) | **$5â€“15** | All options |
-| AIB build compute (1 build/month, ~2 hours) | **$2â€“5** | All options |
+| Microsoft 365 E3 (developer) | $36 Ã- 10 = **$360** | All options (includes Entra P1, Intune P1) |
+| Windows 365 Enterprise (2 vCPU / 8 GB, developer) | $310 Ã- 10 = **$3,100** | All options (one Cloud PC per developer) |
+| Entra ID P1 (agent account, standalone) | $6 Ã- 10 = **$60** | Option 2 (agent identity) |
+| Intune P1 (agent account, standalone) | $8 Ã- 10 = **$80** | Option 2 (agent Cloud PC management) |
+| Windows 365 Enterprise (agent Cloud PC) | $310 Ã- 10 = **$3,100** | Options 2 and 3 (second Cloud PC) |
+| Microsoft 365 E3 (agent account) | $36 Ã- 10 = **$360** | Option 3 only (replaces standalone Entra P1 + Intune P1) |
+| ACG image storage (3 versions, 1 region) | **$5â€"15** | All options |
+| AIB build compute (1 build/month, ~2 hours) | **$2â€"5** | All options |
 | AI API usage | **Varies** | All options; depends on usage volume and models |
 | | | |
 | **Total (Option 1: developer's own identity)** | **~$3,480/month** | M365 E3 + W365 per developer |
@@ -257,9 +289,9 @@ graph TB
     subgraph "Azure Compute Gallery"
         GAL[Gallery: acgW365Dev]
         DEF[Image Definition:<br/>W365-W11-25H2-ENU]
-        V1[v1.0.0 â€” Production]
-        V2[v1.1.0 â€” Production]
-        V3[v1.2.0 â€” Canary/Pilot]
+        V1[v1.0.0 â€" Production]
+        V2[v1.1.0 â€" Production]
+        V3[v1.2.0 â€" Canary/Pilot]
     end
 
     subgraph "Microsoft Intune / Windows 365"
@@ -287,11 +319,11 @@ graph TB
 
 **Layer 1: Source Control.** All infrastructure and build logic lives in Git. The Terraform configuration defines the Azure Compute Gallery, managed identity, RBAC assignments, and AIB template. The build scripts are inline PowerShell within the Terraform HCL, with no external storage account or blob dependencies. Changes are tracked, reviewed, and versioned.
 
-> **ðŸ’¡ Note: Why inline scripts?** Storing PowerShell in external files (Azure Blob Storage, Git raw URLs) would reduce HCL file size but introduce external dependencies: the build would fail if the storage account is misconfigured, the SAS token expires, or the Git URL changes. Inline scripts keep the entire build definition self-contained in a single `terraform apply`. The companion repository includes a setup script (`Initialize-TerraformVars.ps1`) that populates all variables and prepares the tenant, so the inline approach remains manageable even as the scripts grow. For teams that prefer external scripts, the same PowerShell can be extracted to blob storage with minimal changes to the AIB template.
+> **ðŸ'¡ Note: Why inline scripts?** Storing PowerShell in external files (Azure Blob Storage, Git raw URLs) would reduce HCL file size but introduce external dependencies: the build would fail if the storage account is misconfigured, the SAS token expires, or the Git URL changes. Inline scripts keep the entire build definition self-contained in a single `terraform apply`. The companion repository includes a setup script (`Initialize-TerraformVars.ps1`) that populates all variables and prepares the tenant, so the inline approach remains manageable even as the scripts grow. For teams that prefer external scripts, the same PowerShell can be extracted to blob storage with minimal changes to the AIB template.
 
-**Layer 2: Build Pipeline.** A manual `terraform apply` deploys the infrastructure and triggers the AIB build. The build VM (Standard_D4s_v5 by default) downloads installers, runs four phases of PowerShell customization, applies Windows Updates, and runs Sysprep. The result is a generalized VHD published to the Azure Compute Gallery. Build time: 75â€“120 minutes.
+**Layer 2: Build Pipeline.** A manual `terraform apply` deploys the infrastructure and triggers the AIB build. The build VM (Standard_D4s_v5 by default) downloads installers, runs four phases of PowerShell customization, applies Windows Updates, and runs Sysprep. The result is a generalized VHD published to the Azure Compute Gallery. Build time: 75â€"120 minutes.
 
-> **ðŸ’¡ Tip:** The default build VM is `Standard_D4s_v5` (4 vCPU, 16 GB) to improve build reliability and speed. If cost is a priority and longer builds are acceptable, downgrade to `Standard_D2s_v5` (2 vCPU, 8 GB RAM) in `terraform.tfvars`.
+> **ðŸ'¡ Tip:** The default build VM is `Standard_D4s_v5` (4 vCPU, 16 GB) to improve build reliability and speed. If cost is a priority and longer builds are acceptable, downgrade to `Standard_D2s_v5` (2 vCPU, 8 GB RAM) in `terraform.tfvars`.
 
 **Layer 3: Windows 365 Ingestion.** An administrator imports the image version from ACG into Intune (Devices > Windows 365 > Custom images > Add > Azure Compute Gallery). The imported image is assigned to a provisioning policy targeting a developer security group. New Cloud PCs are provisioned from this image.
 
@@ -386,7 +418,7 @@ This model applies when:
 | **Agent account licence** | N/A | Entra P1 + W365 + Intune P1 | M365 E3 + W365 |
 | **Best for** | Interactive, supervised use | Autonomous workflows | Agent needs M365 service access |
 
-> **ðŸ’¡ Tip:** You don't have to choose one model for the entire organization. Many teams start with Option 1 for interactive coding assistance and move to Option 2 or 3 when they adopt autonomous agent workflows. The image is the same in all cases; the identity model is an operational decision, not an image build decision.
+> **ðŸ'¡ Tip:** You don't have to choose one model for the entire organization. Many teams start with Option 1 for interactive coding assistance and move to Option 2 or 3 when they adopt autonomous agent workflows. The image is the same in all cases; the identity model is an operational decision, not an image build decision.
 
 Chapter 27 covers the security rationale and implementation details in depth, including the emerging **Microsoft Entra Agent ID** (preview) capability that formalizes agent identity management. Chapter 27 also addresses the **local administrator question**: why granting admin rights to a network-isolated, dedicated-account Cloud PC is actually the pragmatic choice for AI agent workflows, and why the risk calculus is fundamentally different from giving admin to a corporate-network-connected laptop.
 
@@ -437,7 +469,7 @@ The objective is to produce a Windows 11 image where the AI agents are not merel
 
 Install the binaries. Inject configuration templates. Defer initialization to first login.
 
-> **âš ï¸ Warning:** Never run `openclaw onboard` or `claude login` during the image build. These commands launch interactive wizards that will hang the build until the AIB timeout kills it. More importantly, if they somehow complete, they generate unique session tokens and device identifiers that would be baked into every Cloud PC provisioned from this image, causing identity collisions and security failures.
+> **âš ï¸ Warning:** Never run `openclaw onboard` or `claude login` during the image build. These commands launch interactive wizards that will hang the build until the AIB timeout kills it. More importantly, if they somehow complete, they generate unique session tokens and device identifiers that would be baked into every Cloud PC provisioned from this image, causing identity collisions and security failures.
 
 ---
 
@@ -481,7 +513,7 @@ Before you build anything, the ACG image definition must satisfy Windows 365's c
 | `IsAcceleratedNetworkSupported` | `True` | Required for accelerated networking |
 | `IsSecureBootSupported` | `True` | Explicit Secure Boot declaration |
 
-> **âš ï¸ Warning:** Missing any one of these features will cause the import into Windows 365 to fail. This is non-negotiable. The error message from Intune is often unhelpful; if your import fails, check these features first.
+> **âš ï¸ Warning:** Missing any one of these features will cause the import into Windows 365 to fail. This is non-negotiable. The error message from Intune is often unhelpful; if your import fails, check these features first.
 
 Additionally, the image definition must declare:
 
@@ -519,7 +551,7 @@ resource "azurerm_shared_image" "this" {
     sku       = var.image_sku
   }
 
-  # â”€â”€ Windows 365 ACG Import Requirements â”€â”€
+  # â"€â"€ Windows 365 ACG Import Requirements â"€â"€
   # All five features are mandatory for Windows 365 ingestion.
   # Missing any one will cause the import to fail.
 
@@ -590,13 +622,13 @@ Consider mapping image definitions to AI agent personas. OpenClaw supports perso
 | `W365-W11-25H2-DataSci` | Data science | Python, Conda, CUDA drivers | ML/analytics focus |
 | `W365-W11-25H2-Platform` | Platform engineering | Terraform, kubectl, Helm | Infrastructure-as-code focus |
 
-Each image definition lives in the same Azure Compute Gallery and follows the same build pipeline pattern; only the Phase 1â€“3 customizers differ. The Terraform module can be parameterized with a `team_profile` variable that selects the appropriate toolchain. This approach scales the "image-as-code" pattern to serve the full breadth of an engineering organization while maintaining a single, consistent build and governance process.
+Each image definition lives in the same Azure Compute Gallery and follows the same build pipeline pattern; only the Phase 1â€"3 customizers differ. The Terraform module can be parameterized with a `team_profile` variable that selects the appropriate toolchain. This approach scales the "image-as-code" pattern to serve the full breadth of an engineering organization while maintaining a single, consistent build and governance process.
 
 ### RBAC for Windows 365 Consumption
 
 To import an ACG image into Windows 365 through Intune, the admin account needs the **Compute Gallery Image Reader** role on the gallery. This is intentionally narrow: your image engineering team manages the gallery, and your Cloud PC admins consume from it without the ability to modify or delete gallery resources.
 
-> **ðŸ’¡ Tip:** Separate duties between the image engineering team (who build and publish) and the Cloud PC operations team (who consume and assign). The RBAC model in ACG supports this cleanly.
+> **ðŸ'¡ Tip:** Separate duties between the image engineering team (who build and publish) and the Cloud PC operations team (who consume and assign). The RBAC model in ACG supports this cleanly.
 
 ---
 
@@ -624,28 +656,28 @@ resource "azurerm_user_assigned_identity" "aib" {
 Instead of granting the broad `Contributor` role, the solution assigns exactly four roles, the minimum required for AIB to function:
 
 ```hcl
-# 1. Virtual Machine Contributor â€” create/manage the build VM
+# 1. Virtual Machine Contributor â€" create/manage the build VM
 resource "azurerm_role_assignment" "aib_vm_contributor" {
   scope                = var.resource_group_id
   role_definition_name = "Virtual Machine Contributor"
   principal_id         = azurerm_user_assigned_identity.aib.principal_id
 }
 
-# 2. Network Contributor â€” create transient networking for the build VM
+# 2. Network Contributor â€" create transient networking for the build VM
 resource "azurerm_role_assignment" "aib_network_contributor" {
   scope                = var.resource_group_id
   role_definition_name = "Network Contributor"
   principal_id         = azurerm_user_assigned_identity.aib.principal_id
 }
 
-# 3. Managed Identity Operator â€” assign the identity to the build VM
+# 3. Managed Identity Operator â€" assign the identity to the build VM
 resource "azurerm_role_assignment" "aib_identity_operator" {
   scope                = var.resource_group_id
   role_definition_name = "Managed Identity Operator"
   principal_id         = azurerm_user_assigned_identity.aib.principal_id
 }
 
-# 4. Compute Gallery Image Contributor â€” write image versions to the gallery
+# 4. Compute Gallery Image Contributor â€" write image versions to the gallery
 resource "azurerm_role_assignment" "aib_gallery_contributor" {
   scope                = var.gallery_id
   role_definition_name = "Compute Gallery Image Contributor"
@@ -660,7 +692,7 @@ resource "azurerm_role_assignment" "aib_gallery_contributor" {
 | Managed Identity Operator | Resource Group | Assign the identity to the build VM |
 | Compute Gallery Image Contributor | Gallery | Write image versions to ACG |
 
-> **ðŸ’¡ Tip:** When creating a managed identity and assigning roles in the same `terraform apply`, the Entra ID principal may not have propagated yet, causing intermittent failures. Add `skip_service_principal_aad_check = true` to each `azurerm_role_assignment`, or use a `time_sleep` resource between identity creation and role assignment.
+> **ðŸ'¡ Tip:** When creating a managed identity and assigning roles in the same `terraform apply`, the Entra ID principal may not have propagated yet, causing intermittent failures. Add `skip_service_principal_aad_check = true` to each `azurerm_role_assignment`, or use a `time_sleep` resource between identity creation and role assignment.
 
 ### Why Not Contributor?
 
@@ -694,7 +726,7 @@ You could build everything in this book by clicking through the Azure portal. Yo
 
 **What Terraform is NOT doing here:** Terraform does not manage Windows 365 provisioning policies, Intune configuration profiles, or Entra ID groups. Those are managed through their respective admin portals or via Microsoft Graph. Terraform's scope in this solution ends at "a validated image version exists in the Azure Compute Gallery." Everything after that (importing into Windows 365, assigning to users, post-provisioning configuration) happens outside Terraform.
 
-> **ðŸ’¡ Tip:** If you're new to Terraform, the [official tutorials](https://developer.hashicorp.com/terraform/tutorials) are excellent. For this book, you need to understand `resource`, `variable`, `module`, `output`, `plan`, and `apply`. The solution avoids advanced features like remote state, workspaces, and dynamic blocks to keep the learning curve manageable.
+> **ðŸ'¡ Tip:** If you're new to Terraform, the [official tutorials](https://developer.hashicorp.com/terraform/tutorials) are excellent. For this book, you need to understand `resource`, `variable`, `module`, `output`, `plan`, and `apply`. The solution avoids advanced features like remote state, workspaces, and dynamic blocks to keep the learning curve manageable.
 
 The complete Terraform solution, including all modules, scripts, and variable definitions, is available at **[github.com/kkaminsk/W365Claw](https://github.com/kkaminsk/W365Claw)**. The code excerpts throughout this book are drawn from that repository. Clone it and use it as your starting point.
 
@@ -702,28 +734,28 @@ The complete Terraform solution, including all modules, scripts, and variable de
 
 ```text
 terraform/
-â”œâ”€â”€ main.tf                          # Root module â€” orchestrates gallery, identity, image-builder
-â”œâ”€â”€ variables.tf                     # All configurable inputs with defaults
-â”œâ”€â”€ outputs.tf                       # Gallery IDs, build log info, next steps runbook
-â”œâ”€â”€ versions.tf                      # Provider requirements (azurerm, azapi, time)
-â”œâ”€â”€ terraform.tfvars                 # Environment-specific values (git-ignored)
-â”œâ”€â”€ ../scripts/
-â”‚   â”œâ”€â”€ Initialize-BuildWorkstation.ps1  # Prerequisites installer
-â”‚   â”œâ”€â”€ Initialize-TerraformVars.ps1     # Interactive tfvars populator
-â”‚   â””â”€â”€ Teardown-BuildResources.ps1      # Targeted resource cleanup
-â””â”€â”€ modules/
-    â”œâ”€â”€ gallery/
-    â”‚   â”œâ”€â”€ main.tf                  # ACG + image definition
-    â”‚   â”œâ”€â”€ variables.tf
-    â”‚   â””â”€â”€ outputs.tf
-    â”œâ”€â”€ identity/
-    â”‚   â”œâ”€â”€ main.tf                  # Managed identity + RBAC
-    â”‚   â”œâ”€â”€ variables.tf
-    â”‚   â””â”€â”€ outputs.tf
-    â””â”€â”€ image-builder/
-        â”œâ”€â”€ main.tf                  # AIB template + trigger (inline scripts)
-        â”œâ”€â”€ variables.tf
-        â””â”€â”€ outputs.tf
+â"œâ"€â"€ main.tf                          # Root module â€" orchestrates gallery, identity, image-builder
+â"œâ"€â"€ variables.tf                     # All configurable inputs with defaults
+â"œâ"€â"€ outputs.tf                       # Gallery IDs, build log info, next steps runbook
+â"œâ"€â"€ versions.tf                      # Provider requirements (azurerm, azapi, time)
+â"œâ"€â"€ terraform.tfvars                 # Environment-specific values (git-ignored)
+â"œâ"€â"€ ../scripts/
+â"'   â"œâ"€â"€ Initialize-BuildWorkstation.ps1  # Prerequisites installer
+â"'   â"œâ"€â"€ Initialize-TerraformVars.ps1     # Interactive tfvars populator
+â"'   â""â"€â"€ Teardown-BuildResources.ps1      # Targeted resource cleanup
+â""â"€â"€ modules/
+    â"œâ"€â"€ gallery/
+    â"'   â"œâ"€â"€ main.tf                  # ACG + image definition
+    â"'   â"œâ"€â"€ variables.tf
+    â"'   â""â"€â"€ outputs.tf
+    â"œâ"€â"€ identity/
+    â"'   â"œâ"€â"€ main.tf                  # Managed identity + RBAC
+    â"'   â"œâ"€â"€ variables.tf
+    â"'   â""â"€â"€ outputs.tf
+    â""â"€â"€ image-builder/
+        â"œâ"€â"€ main.tf                  # AIB template + trigger (inline scripts)
+        â"œâ"€â"€ variables.tf
+        â""â"€â"€ outputs.tf
 ```
 
 ### Module Design
@@ -737,7 +769,7 @@ graph LR
     ROOT[main.tf<br/>Root Module] --> GAL[modules/gallery<br/>ACG + Image Definition]
     ROOT --> ID[modules/identity<br/>Managed Identity + RBAC]
     ROOT --> AIB[modules/image-builder<br/>AIB Template + Build Trigger]
-    
+
     GAL -->|gallery_id| ID
     GAL -->|image_definition_id| AIB
     ID -->|managed_identity_id| AIB
@@ -797,7 +829,7 @@ Create the storage account and container before your first `terraform init`. Ena
 
 The code examples in this book show `backend "local" {}` for simplicity during initial learning and experimentation. When you move to team usage or CI/CD pipelines, switch to the remote backend; it's a one-line change in `versions.tf` followed by `terraform init -migrate-state`.
 
-> **âš ï¸ Warning:** The local backend offers no locking, no encryption at rest, and no audit trail. It is acceptable only for single-operator learning environments.
+> **âš ï¸ Warning:** The local backend offers no locking, no encryption at rest, and no audit trail. It is acceptable only for single-operator learning environments.
 
 ### Variables
 
@@ -821,7 +853,7 @@ Every software version is pinned to a specific release. The `source_image_versio
 
 ```hcl
 variable "source_image_version" {
-  description = "Marketplace image version â€” MUST be pinned"
+  description = "Marketplace image version â€" MUST be pinned"
   type        = string
   default     = "26200.7840.260206"
 
@@ -871,10 +903,10 @@ Four resource providers must be registered on your subscription:
 The repository includes a comprehensive prerequisite installer script that automates everything:
 
 ```powershell
-# Interactive â€” prompts before each installation
+# Interactive â€" prompts before each installation
 .\scripts\Initialize-BuildWorkstation.ps1
 
-# Non-interactive â€” installs everything without prompting
+# Non-interactive â€" installs everything without prompting
 .\scripts\Initialize-BuildWorkstation.ps1 -Force
 ```
 
@@ -884,7 +916,7 @@ The script performs three phases:
 
 ```text
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  W365Claw Build Prerequisites â€” Pre-Flight Check
+  W365Claw Build Prerequisites â€" Pre-Flight Check
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
   âœ… OS                Windows Desktop (x64)
@@ -913,15 +945,15 @@ Key implementation details:
 - **Subscription Selection:** If multiple Azure subscriptions are detected after `az login`, the script prompts for selection with bounds validation.
 - **Resource Provider Polling:** Registration is asynchronous. The script polls every 10 seconds with a 5-minute timeout.
 
-> **ðŸ’¡ Tip:** The script works in both Windows PowerShell 5.1 and PowerShell 7+. It uses `winget` as the preferred package manager and falls back to direct downloads if `winget` is unavailable.
+> **ðŸ'¡ Tip:** The script works in both Windows PowerShell 5.1 and PowerShell 7+. It uses `winget` as the preferred package manager and falls back to direct downloads if `winget` is unavailable.
 
 ---
 
-## Chapter 8: Phase 1 â€” Core Runtimes
+## Chapter 8: Phase 1 â€" Core Runtimes
 
 Phase 1 installs Node.js, Python, and PowerShell 7, the runtime foundation for everything else.
 
-> **ðŸ’¡ Note:** If your development teams also require .NET runtimes, these can be added to the build pipeline using a similar pattern (silent MSI install with `ALLUSERS=1`). .NET is out of scope for this book, but the same principles apply: pin the version, verify the checksum, refresh the session PATH.
+> **ðŸ'¡ Note:** If your development teams also require .NET runtimes, these can be added to the build pipeline using a similar pattern (silent MSI install with `ALLUSERS=1`). .NET is out of scope for this book, but the same principles apply: pin the version, verify the checksum, refresh the session PATH.
 
 ### Node.js: The Primary Execution Engine
 
@@ -949,8 +981,8 @@ The critical MSI properties:
 | Property / Switch | Value | Purpose |
 |---|---|---|
 | `/i` | `<path>` | Install mode |
-| `/qn` | â€” | Quiet No UI â€” suppresses all dialogs |
-| `/norestart` | â€” | Prevents automatic reboot during build |
+| `/qn` | â€" | Quiet No UI â€" suppresses all dialogs |
+| `/norestart` | â€" | Prevents automatic reboot during build |
 | `ALLUSERS` | `1` | Forces machine-wide installation to `C:\Program Files` |
 | `ADDLOCAL` | `ALL` | Installs all features (npm, runtime, PATH registration) |
 
@@ -973,7 +1005,7 @@ function Update-SessionEnvironment {
 
 This function reads the Machine and User PATH values directly from the registry and reconstructs `$env:Path`. It must be called after every MSI/EXE installation that modifies the system PATH.
 
-> **âš ï¸ Warning:** Relying on a system reboot to propagate PATH changes is a common but fragile approach. Reboots within AIB builds are complex to orchestrate and add significant time. The `Update-SessionEnvironment` function gives you immediate access to newly installed binaries in the same script block.
+> **âš ï¸ Warning:** Relying on a system reboot to propagate PATH changes is a common but fragile approach. Reboots within AIB builds are complex to orchestrate and add significant time. The `Update-SessionEnvironment` function gives you immediate access to newly installed binaries in the same script block.
 
 ### Python
 
@@ -1007,7 +1039,7 @@ Key flags:
 | `Include_test=0` | Exclude test suite to reduce image size |
 | `Include_launcher=1` | Include the `py` launcher |
 
-> **ðŸ’¡ Tip:** Python 3.14.3 is the current stable release as of this writing. Python patch versions are released regularly, so verify the latest 3.14.x patch version at [python.org/downloads](https://www.python.org/downloads/) before building your image. The installer URL structure is consistent across patch releases, so updating is a single variable change in `terraform.tfvars`.
+> **ðŸ'¡ Tip:** Python 3.14.3 is the current stable release as of this writing. Python patch versions are released regularly, so verify the latest 3.14.x patch version at [python.org/downloads](https://www.python.org/downloads/) before building your image. The installer URL structure is consistent across patch releases, so updating is a single variable change in `terraform.tfvars`.
 
 ### PowerShell 7
 
@@ -1027,7 +1059,7 @@ if ($proc.ExitCode -ne 0) {
 }
 ```
 
-> **ðŸ’¡ Tip:** The PowerShell 7 download URL must use a specific release path (`/download/v7.4.13/`), not the `/latest/` redirect. Using `/latest/` with a versioned filename will 404 when a newer release ships. This was identified as a High severity finding in the Terraform audit.
+> **ðŸ'¡ Tip:** The PowerShell 7 download URL must use a specific release path (`/download/v7.4.13/`), not the `/latest/` redirect. Using `/latest/` with a versioned filename will 404 when a newer release ships. This was identified as a High severity finding in the Terraform audit.
 
 ### The Restart
 
@@ -1067,7 +1099,7 @@ function Get-InstallerWithRetry {
 
 ---
 
-## Chapter 9: Phase 2 â€” Developer Tools
+## Chapter 9: Phase 2 â€" Developer Tools
 
 Phase 2 installs Visual Studio Code, Git, GitHub Desktop, Azure CLI, and the GitHub Copilot extensions.
 
@@ -1095,12 +1127,12 @@ The critical argument is `/MERGETASKS="!runcode,addcontextmenufiles,addcontextme
 
 | Task | Purpose |
 |------|---------|
-| `!runcode` | The `!` negates the task â€” prevents VS Code from launching after install |
+| `!runcode` | The `!` negates the task â€" prevents VS Code from launching after install |
 | `addcontextmenufiles` | Adds "Open with Code" to file context menus |
 | `addcontextmenufolders` | Adds "Open with Code" to folder context menus |
 | `addtopath` | Adds `code` CLI to system PATH |
 
-> **âš ï¸ Warning:** VS Code is downloaded from the `/latest/` URL and is intentionally not version-pinned. This is a documented exception; Microsoft's auto-update redirector doesn't provide stable versioned URLs with published checksums. VS Code's own auto-update mechanism will supersede the installed version on first login anyway. See Chapter 13 for the full rationale.
+> **âš ï¸ Warning:** VS Code is downloaded from the `/latest/` URL and is intentionally not version-pinned. This is a documented exception; Microsoft's auto-update redirector doesn't provide stable versioned URLs with published checksums. VS Code's own auto-update mechanism will supersede the installed version on first login anyway. See Chapter 13 for the full rationale.
 
 ### Git for Windows
 
@@ -1124,9 +1156,9 @@ Key flags:
 
 | Flag | Purpose |
 |------|---------|
-| `/VERYSILENT` | No UI â€” headless install |
+| `/VERYSILENT` | No UI â€" headless install |
 | `/PathOption=Cmd` | Add `git.exe` to system PATH |
-| `/NoAutoCrlf` | Don't set `core.autocrlf` â€” let developers choose |
+| `/NoAutoCrlf` | Don't set `core.autocrlf` â€" let developers choose |
 
 ### GitHub Desktop: The Hydration Mechanism
 
@@ -1154,7 +1186,7 @@ if ($proc.ExitCode -ne 0) {
 }
 ```
 
-> **ðŸ’¡ Tip:** Like VS Code, GitHub Desktop is intentionally not version-pinned. GitHub's CDN always serves the latest version, and the auto-update mechanism supersedes the installed version immediately. This is a documented and accepted exception.
+> **ðŸ'¡ Tip:** Like VS Code, GitHub Desktop is intentionally not version-pinned. GitHub's CDN always serves the latest version, and the auto-update mechanism supersedes the installed version immediately. This is a documented and accepted exception.
 
 ### Azure CLI
 
@@ -1190,11 +1222,11 @@ if (Test-Path $codeBin) {
 }
 ```
 
-> **âš ï¸ Warning:** VS Code extension installation during the image build installs into the **default extensions directory** which, under Local System, may resolve to the system profile. This works for extensions installed via `code.cmd --install-extension` in the System installer because VS Code's System installer uses a shared extensions location. However, for user-specific extensions, use post-provisioning delivery as discussed in Chapter 24.
+> **âš ï¸ Warning:** VS Code extension installation during the image build installs into the **default extensions directory** which, under Local System, may resolve to the system profile. This works for extensions installed via `code.cmd --install-extension` in the System installer because VS Code's System installer uses a shared extensions location. However, for user-specific extensions, use post-provisioning delivery as discussed in Chapter 24.
 
 ---
 
-## Chapter 10: Phase 3 â€” AI Agents
+## Chapter 10: Phase 3 â€" AI Agents
 
 Phase 3 installs OpenClaw, Claude Code, OpenSpec, and the OpenAI Codex CLI. This is the payload, the reason the image exists.
 
@@ -1298,11 +1330,11 @@ The SBOM serves two purposes:
 1. **Audit trail**: You can verify exactly what was installed in any given image version
 2. **Incident response**: If a vulnerability is discovered in a specific version of a dependency, you can quickly identify which image versions are affected
 
-> **ðŸ’¡ Tip:** `npm audit --global` has limited support and may not detect vulnerabilities reliably in the global install tree. The version pin + SBOM generation is the primary control for global npm packages.
+> **ðŸ'¡ Tip:** `npm audit --global` has limited support and may not detect vulnerabilities reliably in the global install tree. The version pin + SBOM generation is the primary control for global npm packages.
 
 ---
 
-## Chapter 11: Phase 4 â€” Configuration and Policy
+## Chapter 11: Phase 4 â€" Configuration and Policy
 
 Phase 4 is where the image transforms from "tools installed" to "enterprise-ready." This phase configures Claude Code enterprise policy, creates the OpenClaw configuration template, registers Active Setup for first-login hydration, sets Teams optimisation prerequisites, and cleans up the image.
 
@@ -1317,7 +1349,7 @@ New-Item -ItemType Directory -Path $claudeConfigDir -Force | Out-Null
 $managedSettings = @{
     autoUpdatesChannel = "stable"
     permissions = @{
-        defaultMode = "ask"
+        defaultMode = "allowWithPermission"
     }
 } | ConvertTo-Json -Depth 5
 
@@ -1325,9 +1357,9 @@ $managedSettingsPath = "$claudeConfigDir\managed-settings.json"
 Set-Content -Path $managedSettingsPath -Value $managedSettings -Encoding UTF8
 ```
 
-The default `defaultMode` is `"ask"`, which requires explicit user approval before Claude Code executes any command. This is the secure default: the agent proposes actions and the developer confirms. For teams that have validated their agent workflows and want to reduce friction, this can be changed to `"allow"` in the `managed-settings.json` template. See Chapter 28 for a deep dive on all available settings, including deny-listing high-risk commands.
+The default `defaultMode` is `"allowWithPermission"`, which allows Claude Code to execute commands but prompts the user for explicit approval on operations that require elevated permissions. This strikes a balance between developer productivity and security: routine operations proceed without friction, while sensitive actions still require confirmation. For teams that want maximum control, this can be changed to `"ask"` (requires approval for all operations) in the `managed-settings.json` template. See Chapter 28 for a deep dive on all available settings, including deny-listing high-risk commands.
 
-> **ðŸ’¡ Tip:** Start with `"ask"` and promote to `"allow"` only after your team has established trust in the agent's behaviour and your network segmentation is verified. It's much easier to loosen permissions than to clean up after a permissive default goes wrong.
+> **ðŸ'¡ Tip:** The `"allowWithPermission"` default assumes your network segmentation (Chapter 30) and agent identity isolation (Chapter 27) are in place. If those controls are not yet deployed, consider starting with `"ask"` until your containment architecture is verified.
 
 ### OpenClaw Configuration Template
 
@@ -1364,7 +1396,7 @@ OpenClaw and Claude Code both support **skills**, bundled instruction sets that 
 During the image build, curated skills are pre-installed to a machine-wide location. At first login, they're copied into the user's profile.
 
 ```powershell
-# â”€â”€ Pre-seed curated agent skills â”€â”€
+# â"€â"€ Pre-seed curated agent skills â"€â"€
 $skillsSourceDir = "C:\ProgramData\OpenClaw\skills"
 New-Item -ItemType Directory -Path $skillsSourceDir -Force | Out-Null
 
@@ -1373,7 +1405,7 @@ New-Item -ItemType Directory -Path $skillsSourceDir -Force | Out-Null
 Write-Host "=== Cloning curated agent skills ==="
 git clone --depth 1 "https://github.com/bighatgroup/approved-agent-skills.git" "$skillsSourceDir\approved" 2>&1 | Write-Host
 if ($LASTEXITCODE -ne 0) {
-    Write-Warning "Skills clone failed â€” skills will need to be installed post-provisioning"
+    Write-Warning "Skills clone failed â€" skills will need to be installed post-provisioning"
 }
 
 # Alternatively, copy skills from a build artifact or Azure Blob
@@ -1384,7 +1416,7 @@ if ($LASTEXITCODE -ne 0) {
 
 **What NOT to include:** Never include skills from the public ClawHub marketplace in the image. All skills must go through your internal vetting pipeline first (see Chapter 29).
 
-> **âš ï¸ Warning:** Skills can contain executable scripts in their `scripts/` subdirectory. Every skill in the curated repository must be reviewed for data exfiltration, prompt injection, and obfuscated payloads before inclusion in the image.
+> **âš ï¸ Warning:** Skills can contain executable scripts in their `scripts/` subdirectory. Every skill in the curated repository must be reviewed for data exfiltration, prompt injection, and obfuscated payloads before inclusion in the image.
 
 ### MCP Servers
 
@@ -1393,7 +1425,7 @@ The Model Context Protocol (MCP) enables Claude Code and OpenClaw to interact wi
 **Stdio MCP servers** (npm packages) should be installed globally during the image build alongside the agent binaries:
 
 ```powershell
-# â”€â”€ Install MCP server packages â”€â”€
+# â"€â"€ Install MCP server packages â"€â"€
 Write-Host "=== Installing MCP server packages ==="
 
 # Perplexity MCP server (web search)
@@ -1412,7 +1444,7 @@ $mcpConfigDir = "C:\ProgramData\OpenClaw\mcp"
 New-Item -ItemType Directory -Path $mcpConfigDir -Force | Out-Null
 
 # mcporter configuration template
-# API keys are placeholder values â€” replaced post-provisioning via Intune
+# API keys are placeholder values â€" replaced post-provisioning via Intune
 $mcpConfig = @{
     servers = @{
         "perplexity" = @{
@@ -1433,7 +1465,7 @@ $mcpConfig = @{
 Set-Content -Path "$mcpConfigDir\mcporter.json" -Value $mcpConfig -Encoding UTF8
 ```
 
-> **ðŸ’¡ Tip:** MCP server configurations often contain API keys. Use placeholder values (e.g., `__PERPLEXITY_API_KEY__`) in the image template and replace them post-provisioning via Intune environment variables or a user-context script that reads from Azure Key Vault. The `microsoft-docs` MCP server is a notable exception; it's a public API that requires no authentication.
+> **ðŸ'¡ Tip:** MCP server configurations often contain API keys. Use placeholder values (e.g., `__PERPLEXITY_API_KEY__`) in the image template and replace them post-provisioning via Intune environment variables or a user-context script that reads from Azure Key Vault. The `microsoft-docs` MCP server is a notable exception; it's a public API that requires no authentication.
 
 ### Active Setup: First-Login Configuration Hydration
 
@@ -1449,11 +1481,7 @@ if (Test-Path $templateFile) {
     New-Item -ItemType Directory -Path $openclawDir -Force | Out-Null
     $workspaceDir = "$env:USERPROFILE\Documents\OpenClawWorkspace"
     New-Item -ItemType Directory -Path $workspaceDir -Force | Out-Null
-
-    # Only copy template if no existing config â€” preserves developer customizations
-    if (-not (Test-Path $configFile)) {
-        Copy-Item -Path $templateFile -Destination $configFile -Force
-    }
+    Copy-Item -Path $templateFile -Destination $configFile -Force
 }
 
 # Hydrate curated agent skills
@@ -1484,9 +1512,9 @@ Set-ItemProperty -Path $activeSetupKey -Name "StubPath" -Value "powershell.exe -
 Set-ItemProperty -Path $activeSetupKey -Name "Version" -Value "1,0,0,0"
 ```
 
-The hydration script checks for existing configuration files before copying; if the developer has already customized their `openclaw.json`, the template will not overwrite it. Skills and MCP configuration are still copied with `-Force` to ensure enterprise updates are applied. The Active Setup `Version` property controls re-execution: if you bump the version in a future image, Active Setup will re-run for users who have already logged in, refreshing their skills and MCP configuration while preserving their personal OpenClaw settings.
+The hydration script overwrites the OpenClaw configuration, skills, and MCP configuration with `-Force` on every execution. This ensures enterprise-mandated settings are consistently applied across all Cloud PCs. The Active Setup `Version` property controls re-execution: if you bump the version in a future image, Active Setup will re-run for users who have already logged in, refreshing their configuration, skills, and MCP settings to match the latest enterprise template. Developer customizations to `openclaw.json` will be replaced; developers who need persistent customizations should manage them outside the template path or use Intune-delivered overrides.
 
-> **ðŸ’¡ Tip:** Active Setup runs in the user's security context at login, which is exactly what we need. The command executes before the desktop fully loads, so the OpenClaw configuration is in place by the time the developer opens a terminal.
+> **ðŸ'¡ Tip:** Active Setup runs in the user's security context at login, which is exactly what we need. The command executes before the desktop fully loads, so the OpenClaw configuration is in place by the time the developer opens a terminal.
 
 ### Teams VDI Optimisation
 
@@ -1500,7 +1528,7 @@ if (-not (Test-Path $teamsRegPath)) {
 Set-ItemProperty -Path $teamsRegPath -Name "IsWVDEnvironment" -Value 1 -Type DWord -Force
 ```
 
-> **âš ï¸ Warning:** Do **not** install the Teams desktop app itself. Deliver Microsoft 365 Apps (without Teams) via Intune post-provisioning. Teams should use the new Teams app delivered through its own deployment channel with media optimisation.
+> **âš ï¸ Warning:** Do **not** install the Teams desktop app itself. Deliver Microsoft 365 Apps (without Teams) via Intune post-provisioning. Teams should use the new Teams app delivered through its own deployment channel with media optimisation.
 
 ### Image Cleanup and DISM
 
@@ -1544,7 +1572,7 @@ The AIB template includes a Windows Update customizer to apply cumulative update
 }
 ```
 
-Without this, newly provisioned Cloud PCs start with a stale image and depend on Windows Update post-provisioning, increasing first-sign-in time by 30â€“60 minutes and leaving a security window during which the machine is vulnerable to patched exploits.
+Without this, newly provisioned Cloud PCs start with a stale image and depend on Windows Update post-provisioning, increasing first-sign-in time by 30â€"60 minutes and leaving a security window during which the machine is vulnerable to patched exploits.
 
 The `exclude:Preview` filter prevents preview/beta updates from being installed, which could introduce instability.
 
@@ -1557,7 +1585,7 @@ Windows Update within AIB can be unpredictable. Cumulative updates on fresh imag
 3. **Re-run the build.** AIB builds are idempotent; a fresh build VM starts clean. Transient failures often succeed on retry.
 4. **If a specific update consistently fails**, add it to the `filters` exclusion list (e.g., `"exclude:$_.Title -like '*KB5034567*'"`) and apply it post-provisioning via Windows Update for Business instead.
 
-> **ðŸ’¡ Tip:** Monthly cumulative updates released on Patch Tuesday can take 45â€“60+ minutes on fresh images. Plan your build windows accordingly and don't schedule builds on Patch Tuesday itself; wait 2â€“3 days for the update CDN to stabilize.
+> **ðŸ'¡ Tip:** Monthly cumulative updates released on Patch Tuesday can take 45â€"60+ minutes on fresh images. Plan your build windows accordingly and don't schedule builds on Patch Tuesday itself; wait 2â€"3 days for the update CDN to stabilize.
 
 ### Sysprep Constraints
 
@@ -1598,7 +1626,7 @@ A `Test-InstallerHash` function verifies every binary installer before execution
 function Test-InstallerHash {
     param([string]$FilePath, [string]$ExpectedHash)
     if ([string]::IsNullOrWhiteSpace($ExpectedHash)) {
-        Write-Host "[INTEGRITY] No SHA256 provided for $(Split-Path $FilePath -Leaf) â€” skipping verification"
+        Write-Host "[INTEGRITY] No SHA256 provided for $(Split-Path $FilePath -Leaf) â€" skipping verification"
         return
     }
     $actual = (Get-FileHash -Path $FilePath -Algorithm SHA256).Hash
@@ -1629,8 +1657,8 @@ When bumping a software version, obtain the SHA256 from the official release:
 | Tool | Checksum Source |
 |------|----------------|
 | Node.js | `https://nodejs.org/dist/v24.13.1/SHASUMS256.txt` |
-| Python | Release page â†’ Files â†’ SHA256 column |
-| PowerShell 7 | GitHub release â†’ `hashes.sha256` asset |
+| Python | Release page â†' Files â†' SHA256 column |
+| PowerShell 7 | GitHub release â†' `hashes.sha256` asset |
 | Git | GitHub release notes or compute from download |
 | Azure CLI | Microsoft docs for MSI releases |
 
@@ -1681,7 +1709,7 @@ All software versions are pinned in Terraform variables:
 | OpenSpec | 0.9.1 | `npm install -g @fission-ai/openspec@0.9.1` |
 | Codex CLI | 0.101.0 | `npm install -g @openai/codex@0.101.0` |
 
-> **ðŸ’¡ Tip:** OpenSpec was originally defaulted to `"latest"`, making builds non-reproducible. This was remediated as part of the supply chain integrity work. Always pin to an exact version.
+> **ðŸ'¡ Tip:** OpenSpec was originally defaulted to `"latest"`, making builds non-reproducible. This was remediated as part of the supply chain integrity work. Always pin to an exact version.
 
 ---
 
@@ -1699,13 +1727,13 @@ Set-Location terraform
 # Populate terraform.tfvars (auto-detects versions, checksums, subscription)
 ..\scripts\Initialize-TerraformVars.ps1
 
-# Initialize (local backend â€” no remote state configuration needed)
+# Initialize (local backend â€" no remote state configuration needed)
 terraform init
 
-# Plan â€” review what will be created
+# Plan â€" review what will be created
 terraform plan -var-file="terraform.tfvars" -out tfplan
 
-# Apply â€” deploys infrastructure and triggers the image build
+# Apply â€" deploys infrastructure and triggers the image build
 terraform apply tfplan
 ```
 
@@ -1739,14 +1767,14 @@ graph TD
 
 | Phase | Duration |
 |-------|----------|
-| Infrastructure deployment | 2â€“5 minutes |
+| Infrastructure deployment | 2â€"5 minutes |
 | Phase 1: Core Runtimes | ~15 minutes |
 | Phase 2: Developer Tools | ~10 minutes |
 | Phase 3: AI Agents | ~10 minutes |
 | Phase 4: Configuration | ~5 minutes |
-| Windows Update | 20â€“40 minutes (varies) |
+| Windows Update | 20â€"40 minutes (varies) |
 | Sysprep + Capture | ~10 minutes |
-| **Total** | **60â€“90 minutes** |
+| **Total** | **60â€"90 minutes** |
 
 The build timeout is set to 120 minutes (`build_timeout_minutes = 120`), with the Terraform timeout set to 150 minutes (`build_timeout_minutes + 30`) to allow for the API action to complete after the build finishes.
 
@@ -1754,9 +1782,9 @@ The build timeout is set to 120 minutes (`build_timeout_minutes = 120`), with th
 
 During the build, you can monitor progress in the Azure Portal:
 
-1. Navigate to **Resource Groups** â†’ `rg-w365-images`
+1. Navigate to **Resource Groups** â†' `rg-w365-images`
 2. Find the AIB template resource (named `aib-w365-dev-ai-1-0-0`)
-3. Check **Runs** â†’ view the latest run
+3. Check **Runs** â†' view the latest run
 4. The build log shows real-time output from each customizer
 
 Alternatively, use Azure CLI:
@@ -1825,7 +1853,7 @@ ACG image versions follow `Major.Minor.Patch` semantics:
 
 | Version Component | Meaning | Example |
 |---|---|---|
-| **Major** | Base OS change or breaking toolchain change | Windows 11 24H2 â†’ 25H2 |
+| **Major** | Base OS change or breaking toolchain change | Windows 11 24H2 â†' 25H2 |
 | **Minor** | Monthly rebuild with updated agents and patches | New OpenClaw version |
 | **Patch** | Hotfix for a specific issue | Critical security patch |
 
@@ -1833,7 +1861,7 @@ ACG image versions follow `Major.Minor.Patch` semantics:
 
 When you publish a new image version, set `excludeFromLatest=true` initially. This is a governance signal, not a technical lock.
 
-> **ðŸ’¡ Tip:** Windows 365 does not auto-consume the "latest" version from your gallery. When you import a custom image in Intune, you manually select a specific version. The `excludeFromLatest` flag doesn't prevent Windows 365 from seeing the version; it's a gallery-level governance signal for your team.
+> **ðŸ'¡ Tip:** Windows 365 does not auto-consume the "latest" version from your gallery. When you import a custom image in Intune, you manually select a specific version. The `excludeFromLatest` flag doesn't prevent Windows 365 from seeing the version; it's a gallery-level governance signal for your team.
 
 ### The Staged Rollout Workflow
 
@@ -1869,8 +1897,8 @@ terraform apply `
 ### Intune Portal Walkthrough
 
 1. Sign in to the **Microsoft Intune admin center** (intune.microsoft.com)
-2. Navigate to **Devices** â†’ **Windows 365** â†’ **Custom images**
-3. Click **Add** â†’ **Azure Compute Gallery**
+2. Navigate to **Devices** â†' **Windows 365** â†' **Custom images**
+3. Click **Add** â†' **Azure Compute Gallery**
 4. Select:
    - **Subscription:** Your subscription containing the gallery
    - **Gallery:** `acgW365Dev`
@@ -1880,14 +1908,14 @@ terraform apply `
 
 ### Provisioning Policy Setup
 
-1. Navigate to **Devices** â†’ **Windows 365** â†’ **Provisioning policies**
+1. Navigate to **Devices** â†' **Windows 365** â†' **Provisioning policies**
 2. Create or edit a provisioning policy:
    - **Image:** Select the imported custom image
    - **Network:** Azure Network Connection (or Microsoft-hosted network)
    - **Join type:** Entra join
    - **Assignment:** Target your developer security group
 
-> **âš ï¸ Warning:** The Windows 365 custom image import step in Intune remains a **manual portal operation**. There is no public Graph API or PowerShell cmdlet to automate the "Add custom image from ACG" action. Your automation pipeline ends at "image version published to ACG," and an admin picks it up from there.
+> **âš ï¸ Warning:** The Windows 365 custom image import step in Intune remains a **manual portal operation**. There is no public Graph API or PowerShell cmdlet to automate the "Add custom image from ACG" action. Your automation pipeline ends at "image version published to ACG," and an admin picks it up from there.
 
 ---
 
@@ -1915,8 +1943,8 @@ There is no mechanism to "push" a new image to running Cloud PCs. If you need an
 The monthly rebuild cadence aligns with Patch Tuesday. In practice, the operational effort per rebuild is:
 
 1. **Run `Initialize-TerraformVars.ps1`**: the script auto-detects the latest versions of all pinned packages, fetches SHA256 checksums, and detects the latest Windows 11 marketplace image. Review the changes and accept.
-2. **Bump `image_version`**: increment the minor version (e.g., `1.1.0` â†’ `1.2.0`).
-3. **Run `terraform apply`**: wait 75â€“120 minutes for the build.
+2. **Bump `image_version`**: increment the minor version (e.g., `1.1.0` â†' `1.2.0`).
+3. **Run `terraform apply`**: wait 75â€"120 minutes for the build.
 4. **Verify and import**: check the ACG image version, import into Intune, test with a pilot group.
 5. **Promote**: set `exclude_from_latest=false` and update the production provisioning policy.
 
@@ -1947,7 +1975,7 @@ The recommended approach:
 - **OneDrive for non-code artefacts** (if licensed), such as personal notes, downloaded references, one-off files that don't belong in a repository.
 - **Treat the Cloud PC as disposable.** If reprovisioning destroys something you can't recover, it should have been in Git.
 
-> **ðŸ’¡ Tip:** Configure the OpenClaw workspace directory outside of the OneDrive sync folders (e.g., `C:\Dev\` or `%USERPROFILE%\Code\` rather than `%USERPROFILE%\Documents\`). This prevents OneDrive from attempting to sync agent workspace files, which can include large `node_modules` directories and frequently-changing memory files.
+> **ðŸ'¡ Tip:** Configure the OpenClaw workspace directory outside of the OneDrive sync folders (e.g., `C:\Dev\` or `%USERPROFILE%\Code\` rather than `%USERPROFILE%\Documents\`). This prevents OneDrive from attempting to sync agent workspace files, which can include large `node_modules` directories and frequently-changing memory files.
 
 ---
 
@@ -2012,7 +2040,7 @@ The key is the `-target="module.image_builder"` flag, which limits destruction t
 ### Cost Optimization Workflow
 
 ```text
-terraform apply â†’ wait for build (~60-90 min) â†’ verify â†’ Teardown-BuildResources.ps1
+terraform apply â†' wait for build (~60-90 min) â†' verify â†' Teardown-BuildResources.ps1
 ```
 
 After teardown, only these resources remain (and incur cost):
@@ -2066,7 +2094,7 @@ The Terraform module currently uses single-region replication only (one replica 
 
 Until this is implemented, replicate image versions to additional regions with manual Azure CLI commands (for example, `az sig image-version update` with `--target-regions`).
 
-Each additional region replica incurs storage costs (proportional to the image size, typically a few dollars per month per region). Replication is asynchronous; the build completes in the primary region first, then replicas propagate to target regions over the next 15â€“30 minutes.
+Each additional region replica incurs storage costs (proportional to the image size, typically a few dollars per month per region). Replication is asynchronous; the build completes in the primary region first, then replicas propagate to target regions over the next 15â€"30 minutes.
 
 ---
 
@@ -2088,19 +2116,19 @@ graph LR
     REVIEW --> MERGE[Merge to main]
     MERGE --> PLAN[CI: terraform plan<br/>+ artifact upload]
     PLAN --> APPROVE[Manual Approval Gate]
-    APPROVE --> APPLY[CD: terraform apply<br/>â†’ AIB Build ~90 min]
-    APPLY --> VERIFY[Post-Build Verification<br/>â†’ Check ACG version]
+    APPROVE --> APPLY[CD: terraform apply<br/>â†' AIB Build ~90 min]
+    APPLY --> VERIFY[Post-Build Verification<br/>â†' Check ACG version]
     VERIFY --> TEARDOWN[Teardown Build Resources]
     TEARDOWN --> NOTIFY[Notify: Image ready<br/>for Intune import]
 ```
 
 ### Key Design Decisions
 
-**Trigger on merge to `main`, not on push.** Image builds are expensive (60â€“90 minutes of compute) and produce artefacts that may be consumed by production Cloud PCs. They should only run after code review, not on every feature branch push.
+**Trigger on merge to `main`, not on push.** Image builds are expensive (60â€"90 minutes of compute) and produce artefacts that may be consumed by production Cloud PCs. They should only run after code review, not on every feature branch push.
 
 **Manual approval gate before `terraform apply`.** The `terraform plan` output should be reviewed by a human before the build starts. This is the last chance to catch a misconfigured version pin or an unintended source image change. In GitHub Actions, use an `environment` with required reviewers. In Azure DevOps, use an approval gate on the release stage.
 
-**Long-running job support.** The AIB build takes 60â€“90 minutes. Most CI/CD runners have default timeouts of 30â€“60 minutes. Configure the build step with a timeout of at least 150 minutes (matching the Terraform timeout).
+**Long-running job support.** The AIB build takes 60â€"90 minutes. Most CI/CD runners have default timeouts of 30â€"60 minutes. Configure the build step with a timeout of at least 150 minutes (matching the Terraform timeout).
 
 **Service principal authentication.** The pipeline authenticates to Azure using a service principal or workload identity federation (OIDC), not a personal account. The service principal needs the same RBAC permissions as the manual operator: `Contributor` on the resource group (or the four granular roles described in Chapter 5) plus the ability to trigger AIB builds.
 
@@ -2235,7 +2263,7 @@ The pipeline ends at "image version published to ACG." The following steps remai
 
 When Microsoft provides Graph API support for custom image import, the pipeline can be extended to automate the full lifecycle. Until then, the pipeline's job is to ensure a validated, verified image version is available in ACG and ready for an administrator to pick up.
 
-> **ðŸ’¡ Tip:** Use the pipeline's notification step to send a message (Teams, email, Slack) with the exact image version, a summary of what changed (version bumps, security patches), and a link to the Intune custom image import page. This reduces the manual step to a single click.
+> **ðŸ'¡ Tip:** Use the pipeline's notification step to send a message (Teams, email, Slack) with the exact image version, a summary of what changed (version bumps, security patches), and a link to the Intune custom image import page. This reduces the manual step to a single click.
 
 ---
 
@@ -2333,9 +2361,9 @@ For the initial deployment, API keys are configured **manually by the developer*
 
 The MCP configuration template uses placeholder values (e.g., `__PERPLEXITY_API_KEY__`). These placeholders are referenced via environment variable expansion at runtime; the MCP server reads `$env:PERPLEXITY_API_KEY`, not the literal placeholder string. No string replacement is needed in the configuration file itself.
 
-> **ðŸ’¡ Tip:** For teams that need centralized key management in the future, consider Intune remediation scripts that read from Azure Key Vault, or a self-service portal where developers can retrieve approved API keys. The manual approach described here is the simplest starting point and avoids storing secrets in Intune configuration profiles.
+> **ðŸ'¡ Tip:** For teams that need centralized key management in the future, consider Intune remediation scripts that read from Azure Key Vault, or a self-service portal where developers can retrieve approved API keys. The manual approach described here is the simplest starting point and avoids storing secrets in Intune configuration profiles.
 
-> **âš ï¸ Warning:** On Windows 11, user-level environment variables are stored in the registry and are readable by any process running under that user's security context. For high-value secrets, consider using Windows Credential Manager or Azure Key Vault integration.
+> **âš ï¸ Warning:** On Windows 11, user-level environment variables are stored in the registry and are readable by any process running under that user's security context. For high-value secrets, consider using Windows Credential Manager or Azure Key Vault integration.
 
 ### Configuring OpenClaw Memory Search
 
@@ -2351,7 +2379,7 @@ openclaw agents auth add main --provider openai --token sk-your-openai-api-key
 
 This writes the key to the agent's `auth-profiles.json` file (typically `~/.openclaw/agents/main/agent/auth-profiles.json`). The key is used exclusively for embedding generation and does not affect which model OpenClaw uses for conversation, which is controlled by the Anthropic API key.
 
-> **ðŸ’¡ Tip:** If the CLI command fails silently (which can happen on some Windows configurations), the key can be added manually by editing `auth-profiles.json` directly:
+> **ðŸ'¡ Tip:** If the CLI command fails silently (which can happen on some Windows configurations), the key can be added manually by editing `auth-profiles.json` directly:
 >
 > ```json
 > {
@@ -2371,7 +2399,7 @@ This writes the key to the agent's `auth-profiles.json` file (typically `~/.open
 > }
 > ```
 
-> **ðŸ’¡ Tip:** The OpenAI API key is obtained from [platform.openai.com/api-keys](https://platform.openai.com/api-keys), not from ChatGPT. The API is pay-as-you-go with separate billing from any ChatGPT subscription. A payment method must be added at [platform.openai.com/settings/organization/billing/overview](https://platform.openai.com/settings/organization/billing/overview).
+> **ðŸ'¡ Tip:** The OpenAI API key is obtained from [platform.openai.com/api-keys](https://platform.openai.com/api-keys), not from ChatGPT. The API is pay-as-you-go with separate billing from any ChatGPT subscription. A payment method must be added at [platform.openai.com/settings/organization/billing/overview](https://platform.openai.com/settings/organization/billing/overview).
 
 **Why this is a post-provisioning task:** The embedding API key is a per-developer (or per-team) credential. Different teams may use different embedding providers, and some organizations may choose not to enable memory search at all. Baking a shared key into the image would violate the "never bake secrets" principle and remove the flexibility to configure per-developer.
 
@@ -2440,7 +2468,7 @@ npm install -g @anthropic-ai/claude-code@2.2.0
 
 Deploy this script via Intune as a platform script targeting the Cloud PC device group. This gives you the ability to push agent updates within hours, compared to the multi-day cycle of rebuilding an image, importing it, and reprovisioning.
 
-> **ðŸ’¡ Tip:** This is one of the strongest arguments for installing agents via npm rather than a traditional installer: you get a zero-downtime update path that doesn't require admin portal access or user disruption.
+> **ðŸ'¡ Tip:** This is one of the strongest arguments for installing agents via npm rather than a traditional installer: you get a zero-downtime update path that doesn't require admin portal access or user disruption.
 
 ### Updating Skills
 
@@ -2462,7 +2490,7 @@ git clone "https://<PAT>@github.com/org/approved-agent-skills.git" $tempDir
 
 For Azure DevOps, GCM supports Azure AD-backed authentication natively, so no PAT is required if the developer (or agent identity) has appropriate project access.
 
-> **âš ï¸ Warning:** Never bake PATs into the image. They are user-specific, time-limited credentials that must be managed per-developer.
+> **âš ï¸ Warning:** Never bake PATs into the image. They are user-specific, time-limited credentials that must be managed per-developer.
 
 ```powershell
 # Runs in user context via Intune
@@ -2517,7 +2545,7 @@ When deployed on Windows 365 Cloud PCs, these agents operate behind the corporat
 | **Supply Chain Risk** | Low (Anthropic-published npm package) | **High** (ClawHavoc, 12% malicious skills) |
 | **Memory Persistence** | Session-scoped | Long-term (SOUL.md, MEMORY.md) |
 | **Network Exposure** | Outbound API calls only | WebSocket server, REST API |
-| **Primary Threat** | Prompt injection â†’ shell execution | Supply chain â†’ malware delivery |
+| **Primary Threat** | Prompt injection â†' shell execution | Supply chain â†' malware delivery |
 
 ![Agent Threat Model](./Graphics/Chapter26.png)
 
@@ -2527,7 +2555,7 @@ When deployed on Windows 365 Cloud PCs, these agents operate behind the corporat
 
 ---
 
-## Chapter 27: Identity Architecture â€” The Secondary User Imperative
+## Chapter 27: Identity Architecture â€" The Secondary User Imperative
 
 ### Why Primary User Identity Fails
 
@@ -2567,7 +2595,7 @@ graph LR
 | **Description** | Standard cloud-only Entra ID account | Specialized identity for AI agents | Local Windows account |
 | **Use Case** | Interactive & Cloud access | Autonomous background agents | Strictly local operations |
 | **Authentication** | Password + MFA (FIDO2) | Certificate-based | Local password |
-| **Auditability** | High â€” Entra ID sign-in logs | Very High â€” explicit Agent ID logs | Low â€” local only |
+| **Auditability** | High â€" Entra ID sign-in logs | Very High â€" explicit Agent ID logs | Low â€" local only |
 | **Intune Management** | Full | Full | Limited |
 | **Cost** | Requires licence (M365 F3 or Entra P1) | Usage-based (preview) | Free |
 
@@ -2638,10 +2666,10 @@ The critical enabler is the **dedicated agent account** from the isolated model.
 
 | Scenario | Local Admin | Network Isolated | Dedicated Account | Risk Level |
 |----------|------------|-----------------|-------------------|------------|
-| Primary user on corporate network | âœ… | âŒ | âŒ | ðŸ”´ **Critical** â€” compromised agent has admin + corporate access + user's full identity |
-| Primary user, network isolated | âœ… | âœ… | âŒ | ðŸŸ¡ **Medium** â€” blast radius contained, but agent actions attributed to the human |
-| Dedicated account, network isolated | âœ… | âœ… | âœ… | ðŸŸ¢ **Low** â€” contained blast radius, scoped permissions, clean audit trail |
-| Standard user, network isolated | âŒ | âœ… | âœ… | ðŸŸ¢ **Low** â€” maximum restriction, but constant friction for agent workflows |
+| Primary user on corporate network | âœ… | âŒ | âŒ | ðŸ"´ **Critical** â€" compromised agent has admin + corporate access + user's full identity |
+| Primary user, network isolated | âœ… | âœ… | âŒ | ðŸŸ¡ **Medium** â€" blast radius contained, but agent actions attributed to the human |
+| Dedicated account, network isolated | âœ… | âœ… | âœ… | ðŸŸ¢ **Low** â€" contained blast radius, scoped permissions, clean audit trail |
+| Standard user, network isolated | âŒ | âœ… | âœ… | ðŸŸ¢ **Low** â€" maximum restriction, but constant friction for agent workflows |
 
 The sweet spot is **dedicated account + network isolated + local admin**. The agent can do its job without friction, the network prevents lateral movement, the dedicated identity prevents privilege inheritance from the human, and reprovisioning resets the machine to a known-good state.
 
@@ -2664,9 +2692,9 @@ The agent account does not need M365 E3 because it has no email, Teams, SharePoi
 
 Option 3 is for scenarios where the agent needs to authenticate independently to Microsoft 365 services (Graph API, Teams channels, SharePoint document libraries). The incremental cost over Option 2 is the difference between standalone Entra P1 + Intune P1 and a full M365 E3 licence.
 
-For a team of 10 developers, the incremental cost of Options 2 or 3 might be Â£3,000â€“Â£15,000/year depending on the SKU. This is a rounding error compared to the cost of a security incident where a compromised agent with the developer's primary identity exfiltrates source code or accesses sensitive systems.
+For a team of 10 developers, the incremental cost of Options 2 or 3 might be Â£3,000â€"Â£15,000/year depending on the SKU. This is a rounding error compared to the cost of a security incident where a compromised agent with the developer's primary identity exfiltrates source code or accesses sensitive systems.
 
-> **ðŸ’¡ Tip:** If budget is a constraint, consider using a smaller Windows 365 SKU for the agent Cloud PC. The agent doesn't need 8 vCPU and 32 GB RAM; most agent workloads are I/O bound (API calls, file reads), not compute bound. A 2 vCPU/8 GB SKU is often sufficient and significantly cheaper.
+> **ðŸ'¡ Tip:** If budget is a constraint, consider using a smaller Windows 365 SKU for the agent Cloud PC. The agent doesn't need 8 vCPU and 32 GB RAM; most agent workloads are I/O bound (API calls, file reads), not compute bound. A 2 vCPU/8 GB SKU is often sufficient and significantly cheaper.
 
 #### When Standard User Is Appropriate
 
@@ -2721,7 +2749,7 @@ This is a theoretical risk based on general Windows NTLM relay attack primitives
 
 Claude Code's permission system intercepts and gates file system and network calls. However, Windows handles UNC paths pointing to WebDAV shares (e.g., `\\attacker.com\share`) at a kernel level via the **WebClient** service. If a prompt injection tricked Claude Code into accessing a UNC path, Windows could automatically attempt to authenticate to the remote server using the current user's NTLM hash. This would bypass Claude Code's internal permission logic because it appears as a file read, not a network request.
 
-**Mitigation â€” Disable the WebClient Service:**
+**Mitigation â€" Disable the WebClient Service:**
 
 ```powershell
 Set-Service -Name WebClient -StartupType Disabled -Status Stopped
@@ -2809,7 +2837,7 @@ Configure the NSG associated with the Cloud PC subnet to enforce a **default den
 
 ```text
 Priority  Direction  Action  Destination                          Port    Protocol  Purpose
-â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 # AI Agent API Endpoints
 100       Outbound   Allow   api.anthropic.com                    443     TCP       Claude Code / OpenClaw API
 110       Outbound   Allow   api.openai.com                       443     TCP       Codex CLI / OpenAI API
@@ -2837,7 +2865,7 @@ Priority  Direction  Action  Destination                          Port    Protoc
 4096      Outbound   Deny    *                                    *       *         Block all other traffic
 ```
 
-> **ðŸ’¡ Important:** Windows 365 Cloud PCs require connectivity to specific Microsoft endpoints for RDP gateway, Intune management, Windows Update, Defender, and Entra ID authentication. The full list of required endpoints is published at [learn.microsoft.com/windows-365/enterprise/requirements-network](https://learn.microsoft.com/windows-365/enterprise/requirements-network). Review this list before deploying your NSG â€” missing a required endpoint will cause provisioning failures or management gaps. The rules above cover the most critical service tags; consult the published list for the complete set.
+> **ðŸ'¡ Important:** Windows 365 Cloud PCs require connectivity to specific Microsoft endpoints for RDP gateway, Intune management, Windows Update, Defender, and Entra ID authentication. The full list of required endpoints is published at [learn.microsoft.com/windows-365/enterprise/requirements-network](https://learn.microsoft.com/windows-365/enterprise/requirements-network). Review this list before deploying your NSG â€" missing a required endpoint will cause provisioning failures or management gaps. The rules above cover the most critical service tags; consult the published list for the complete set.
 >
 > Note: The priority 900 rule allows general HTTPS outbound to the internet, which is necessary for AI agents that need to access arbitrary web resources (documentation, APIs, package registries). If your security posture requires stricter control, replace this with explicit allowlists for each endpoint the agent needs, but be prepared for operational overhead as agents discover new endpoints.
 
@@ -2884,7 +2912,7 @@ Deploy via Intune Endpoint Protection profiles:
 
 ### AppLocker / WDAC
 
-> **âš ï¸ Note:** WDAC with Constrained Language Mode represents the **strictest security posture** and is appropriate only for environments with the highest security requirements. Enforcing CLM will break many developer PowerShell workflows, including custom modules, script-based build tools, and ad-hoc scripting all require Full Language Mode. Evaluate the developer workflow impact carefully before enabling CLM, and expect significant effort to produce a working WDAC policy that allows legitimate development activities while blocking malicious ones.
+> **âš ï¸ Note:** WDAC with Constrained Language Mode represents the **strictest security posture** and is appropriate only for environments with the highest security requirements. Enforcing CLM will break many developer PowerShell workflows, including custom modules, script-based build tools, and ad-hoc scripting all require Full Language Mode. Evaluate the developer workflow impact carefully before enabling CLM, and expect significant effort to produce a working WDAC policy that allows legitimate development activities while blocking malicious ones.
 
 **Windows Defender Application Control (WDAC)** (optional, strict environments only):
 - Enforce **Constrained Language Mode** for PowerShell (limits .NET API access from scripts)
@@ -2900,8 +2928,8 @@ Deploy via Intune Endpoint Protection profiles:
 For high-risk analysis tasks, configure Cloud PCs to support Windows Sandbox:
 
 ```text
-OMA-URI: ./Device/Vendor/MSFT/Policy/Config/WindowsSandbox/AllowAudioInput â†’ 0
-OMA-URI: ./Device/Vendor/MSFT/Policy/Config/WindowsSandbox/AllowNetworking â†’ 0
+OMA-URI: ./Device/Vendor/MSFT/Policy/Config/WindowsSandbox/AllowAudioInput â†' 0
+OMA-URI: ./Device/Vendor/MSFT/Policy/Config/WindowsSandbox/AllowNetworking â†' 0
 ```
 
 This allows agents to spin up disposable, isolated environments without network access for analyzing untrusted code.
@@ -2954,7 +2982,7 @@ Deploy Sysmon to Cloud PCs with a configuration tuned for agent monitoring:
 
 | Event ID | What to Monitor | Why |
 |----------|-----------------|-----|
-| **1** (Process Create) | `node.exe` spawning `cmd.exe` or `powershell.exe` with suspicious arguments (`-encodedCommand`, `DownloadString`) | Prompt injection â†’ shell execution |
+| **1** (Process Create) | `node.exe` spawning `cmd.exe` or `powershell.exe` with suspicious arguments (`-encodedCommand`, `DownloadString`) | Prompt injection â†' shell execution |
 | **3** (Network Connection) | Agent processes connecting to non-standard ports (not 80/443) or unexpected IPs | Lateral movement, C2 communication |
 | **11** (File Create) | Creation of `.exe`, `.bat`, `.ps1` in agent working directory or Temp | Malware staging |
 | **12/13** (Registry) | Modifications to Run keys, Scheduled Tasks | Persistence mechanisms |
@@ -3023,7 +3051,7 @@ $gatewayProcess = Get-Process -Name "node" -ErrorAction SilentlyContinue |
     Where-Object { $_.CommandLine -match "openclaw" }
 
 if ($gatewayProcess) {
-    # Gateway is running â€” check if it's responsive
+    # Gateway is running â€" check if it's responsive
     try {
         $response = Invoke-WebRequest -Uri "http://127.0.0.1:18789/health" `
             -TimeoutSec 5 -UseBasicParsing -ErrorAction Stop
@@ -3083,7 +3111,7 @@ Write-Output "Remediation failed"
 exit 1
 ```
 
-Deploy this as an Intune remediation with a schedule of every 1â€“4 hours depending on how critical gateway uptime is for your team.
+Deploy this as an Intune remediation with a schedule of every 1â€"4 hours depending on how critical gateway uptime is for your team.
 
 **Alerting: Sentinel Query**
 
@@ -3132,7 +3160,7 @@ Register-ScheduledTask -TaskName "OpenClaw Gateway Watchdog" `
 
 This provides sub-minute recovery from gateway crashes without depending on Intune remediation timing.
 
-> **ðŸ’¡ Recommendation:** For production deployments, register the OpenClaw gateway as a **Windows service** using [nssm](https://nssm.cc/) (Non-Sucking Service Manager) or `node-windows`. A Windows service provides automatic restart on failure, event log integration, and SCM (Service Control Manager) lifecycle management, all of which the scheduled task watchdog must simulate. The separate [OpenClaw Gateway Watchdog](https://github.com/openclaw/gateway-watchdog) project implements exactly this pattern. The scheduled task approach above is acceptable for initial deployments and evaluation, but the Windows service model should be the target for any team relying on persistent gateway availability.
+> **ðŸ'¡ Recommendation:** For production deployments, register the OpenClaw gateway as a **Windows service** using [nssm](https://nssm.cc/) (Non-Sucking Service Manager) or `node-windows`. A Windows service provides automatic restart on failure, event log integration, and SCM (Service Control Manager) lifecycle management, all of which the scheduled task watchdog must simulate. The separate [OpenClaw Gateway Watchdog](https://github.com/openclaw/gateway-watchdog) project implements exactly this pattern. The scheduled task approach above is acceptable for initial deployments and evaluation, but the Windows service model should be the target for any team relying on persistent gateway availability.
 
 ---
 
@@ -3142,7 +3170,7 @@ This provides sub-minute recovery from gateway crashes without depending on Intu
 
 | Symptom | Cause | Resolution |
 |---|---|---|
-| **AIB build times out** (120+ min) | Windows Update taking too long, or large cumulative update | Increase `build_timeout_minutes` to 150â€“180; exclude problematic KBs |
+| **AIB build times out** (120+ min) | Windows Update taking too long, or large cumulative update | Increase `build_timeout_minutes` to 150â€"180; exclude problematic KBs |
 | **npm install fails with EACCES** | PATH not refreshed after Node.js install | Ensure `Update-SessionEnvironment` is called after MSI install |
 | **`openclaw: command not found`** after install | npm global bin not in PATH | Run `Update-SessionEnvironment`; verify `C:\Program Files\nodejs` is in system PATH |
 | **Sysprep fails** | Machine was domain-joined, or recovery partition exists | Verify source image is clean marketplace image; check for provisioning packages |
@@ -3177,6 +3205,39 @@ az image builder show-runs --name "aib-w365-dev-ai-1-0-0" --resource-group "rg-w
 
 ---
 
+## Chapter 34: Troubleshooting and FAQ
+
+### Build and Image Pipeline
+
+- AIB build fails during provisioning: confirm all required resource providers are registered and the managed identity has Contributor on the resource group.
+- Terraform apply hangs on image build: check AIB run status in Azure Portal and validate network egress to installer sources.
+- Version drift: ensure `terraform.tfvars` values match the versions pinned in the build scripts and the component matrix.
+
+### Windows 365 Import
+
+- Import fails with image not found: verify the image version exists in the Azure Compute Gallery and is replicated to the target region.
+- Provisioning policy cannot see the image: confirm the Intune image import succeeded and the image is assigned to the correct region.
+- DR region provisioning fails: replicate the ACG image version to the failover region and re-import if needed.
+
+### First Login Experience
+
+- PATH changes not visible: restart the session after MSI installs or trigger a logoff/logon cycle.
+- GitHub Desktop does not appear: ensure the hydration step runs on first login and that the user profile is not roaming.
+- VS Code extensions missing: validate the Intune script ran in user context and that the extension IDs are correct.
+
+### Agent Runtime
+
+- Agent cannot access API keys: verify Intune settings catalog or environment variable deployment for the agent account.
+- CLI commands fail: confirm Node.js and npm are installed system-wide and that global npm paths are in `PATH`.
+- MCP servers not available: confirm global npm installs completed and the config template was hydrated into the user profile.
+
+### Operations
+
+- Reprovisioning resets user config: store everything critical in repo or OneDrive and rely on Active Setup to rehydrate config.
+- Updates on running Cloud PCs fail: use an Intune platform script in user context and avoid running update commands during image build.
+
+---
+
 ## Chapter 35: PowerShell Scripts
 
 ### Initialize-BuildWorkstation.ps1
@@ -3197,7 +3258,7 @@ az image builder show-runs --name "aib-w365-dev-ai-1-0-0" --resource-group "rg-w
       - Azure resource provider registration
       - Terraform initialization
 
-    The script is idempotent â€” running it on an already-configured machine is a no-op.
+    The script is idempotent â€" running it on an already-configured machine is a no-op.
 
 .PARAMETER Force
     Skip confirmation prompts and install all missing prerequisites automatically.
@@ -3207,11 +3268,11 @@ az image builder show-runs --name "aib-w365-dev-ai-1-0-0" --resource-group "rg-w
 
 .EXAMPLE
     .\Initialize-BuildWorkstation.ps1
-    # Interactive mode â€” prompts before each installation
+    # Interactive mode â€" prompts before each installation
 
 .EXAMPLE
     .\Initialize-BuildWorkstation.ps1 -Force
-    # Non-interactive â€” installs everything without prompting
+    # Non-interactive â€" installs everything without prompting
 #>
 
 [CmdletBinding()]
@@ -3331,12 +3392,12 @@ function Test-TerraformInitialized {
     return (Test-Path $tfDir -PathType Container)
 }
 
-# â”€â”€â”€ Pre-Flight Checks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# â"€â"€â"€ Pre-Flight Checks â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 function Invoke-PreFlightChecks {
     Write-Host ""
     Write-Host "â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•" -ForegroundColor Cyan
-    Write-Host "  W365Claw Build Prerequisites â€” Pre-Flight Check" -ForegroundColor Cyan
+    Write-Host "  W365Claw Build Prerequisites â€" Pre-Flight Check" -ForegroundColor Cyan
     Write-Host "â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•" -ForegroundColor Cyan
 
     $results = [ordered]@{}
@@ -3380,7 +3441,7 @@ function Invoke-PreFlightChecks {
     return $results
 }
 
-# â”€â”€â”€ Installation Phase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# â"€â"€â"€ Installation Phase â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 function Install-MissingPrerequisites {
     param([System.Collections.Specialized.OrderedDictionary]$Results)
@@ -3400,7 +3461,7 @@ function Install-MissingPrerequisites {
     # Each missing prerequisite is installed with confirmation (or automatically with -Force)
 }
 
-# â”€â”€â”€ Main Execution â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# â"€â"€â"€ Main Execution â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 $TerraformDir = (Resolve-Path $TerraformDir -ErrorAction SilentlyContinue).Path
 if (-not $TerraformDir) { $TerraformDir = Join-Path $PSScriptRoot "..\terraform" }
@@ -3434,7 +3495,7 @@ if ($didInstall) {
 }
 ```
 
-> **ðŸ’¡ Tip:** The full script is available in the W365Claw repository at `scripts/Initialize-BuildWorkstation.ps1`. The version above is abbreviated for readability; the complete implementation includes Azure CLI, Git, Az Module checks, Azure login with subscription selection, resource provider registration with polling, and `terraform init`.
+> **ðŸ'¡ Tip:** The full script is available in the W365Claw repository at `scripts/Initialize-BuildWorkstation.ps1`. The version above is abbreviated for readability; the complete implementation includes Azure CLI, Git, Az Module checks, Azure login with subscription selection, resource provider registration with polling, and `terraform init`.
 
 ### Initialize-TerraformVars.ps1
 
@@ -3506,7 +3567,7 @@ Before writing, the script displays a formatted summary table of all values:
 
 ```text
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  Summary â€” terraform.tfvars
+  Summary â€" terraform.tfvars
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
   subscription_id       = 12345678-abcd-1234-efgh-123456789012
@@ -3533,10 +3594,10 @@ The `-Force` flag skips all prompts and writes immediately, which is useful for 
 #### Usage
 
 ```powershell
-# Interactive â€” prompts for each value with auto-detected defaults
+# Interactive â€" prompts for each value with auto-detected defaults
 .\scripts\Initialize-TerraformVars.ps1
 
-# Non-interactive â€” auto-detect everything and write immediately
+# Non-interactive â€" auto-detect everything and write immediately
 .\scripts\Initialize-TerraformVars.ps1 -Force
 
 # Custom terraform directory
@@ -3553,7 +3614,7 @@ The `-Force` flag skips all prompts and writes immediately, which is useful for 
 
 **PowerShell 5.1 compatibility.** The script avoids `&&` (PS7-only), ternary operators, and other PS7-specific syntax. It runs on both Windows PowerShell 5.1 and PowerShell 7+, matching the `Initialize-BuildWorkstation.ps1` style.
 
-> **ðŸ’¡ Tip:** The full script (~750 lines) is available in the W365Claw repository at `scripts/Initialize-TerraformVars.ps1`. Run it once before your first `terraform plan` to populate all version pins and checksums automatically.
+> **ðŸ'¡ Tip:** The full script (~750 lines) is available in the W365Claw repository at `scripts/Initialize-TerraformVars.ps1`. Run it once before your first `terraform plan` to populate all version pins and checksums automatically.
 
 ### Teardown-BuildResources.ps1
 
@@ -3585,7 +3646,7 @@ $TerraformDir = (Resolve-Path $TerraformDir -ErrorAction Stop).Path
 
 Write-Host ""
 Write-Host "â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•" -ForegroundColor Cyan
-Write-Host "  W365Claw â€” Targeted Build Resource Teardown" -ForegroundColor Cyan
+Write-Host "  W365Claw â€" Targeted Build Resource Teardown" -ForegroundColor Cyan
 Write-Host "â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "This will remove:" -ForegroundColor Yellow
@@ -3700,18 +3761,33 @@ try {
 | **Claude Code** | 2.1.42 | `npm install -g` | Image Build / Local System | Never run `claude login` during build |
 | **OpenSpec** | 0.9.1 | `npm install -g` | Image Build / Local System | Pin version (was `latest`) |
 | **Codex CLI** | 0.101.0 | `npm install -g` | Image Build / Local System | OpenAI's code generation CLI |
-| **OpenClaw Config** | â€” | Template + Active Setup | Image Build + First Login | Template in ProgramData, copied to user profile |
-| **Agent Skills (curated)** | â€” | Git clone / file copy | Image Build + First Login | Vetted via Cisco Skill Scanner; copied to `~/.agents/skills/` |
-| **MCP Servers (stdio)** | â€” | `npm install -g` | Image Build / Local System | Same install context as agent binaries |
-| **MCP Server Config** | â€” | Template + Active Setup | Image Build + First Login | API key placeholders; real keys via Intune env vars |
-| **Claude Code Policy** | â€” | `managed-settings.json` | Image Build / Local System | Machine-level enterprise governance |
-| **API Keys** | â€” | Intune Settings Catalog | Post-Provisioning | **Never bake secrets into the image** |
-| **VS Code Extensions** | â€” | `code --install-extension` | Post-Provisioning / User Context | Cannot install machine-wide reliably |
-| **Agent Updates** | â€” | `npm update -g` | Intune Script on Running Cloud PCs | No reprovisioning needed |
+| **OpenClaw Config** | â€" | Template + Active Setup | Image Build + First Login | Template in ProgramData, copied to user profile |
+| **Agent Skills (curated)** | â€" | Git clone / file copy | Image Build + First Login | Vetted via Cisco Skill Scanner; copied to `~/.agents/skills/` |
+| **MCP Servers (stdio)** | â€" | `npm install -g` | Image Build / Local System | Same install context as agent binaries |
+| **MCP Server Config** | â€" | Template + Active Setup | Image Build + First Login | API key placeholders; real keys via Intune env vars |
+| **Claude Code Policy** | â€" | `managed-settings.json` | Image Build / Local System | Machine-level enterprise governance |
+| **API Keys** | â€" | Intune Settings Catalog | Post-Provisioning | **Never bake secrets into the image** |
+| **VS Code Extensions** | â€" | `code --install-extension` | Post-Provisioning / User Context | Cannot install machine-wide reliably |
+| **Agent Updates** | â€" | `npm update -g` | Intune Script on Running Cloud PCs | No reprovisioning needed |
 
 ---
 
 ## Appendix: Operational Quick Reference
+
+## Appendix: Feedback and Errata
+
+If you find an error, version mismatch, or broken link, file an issue in the W365Claw repository with:
+
+- The exact section or heading name
+- Your environment details (region, SKU, image version)
+- The command output or error text
+- The date of the build
+
+This keeps the book and the repository aligned and makes future image updates safer.
+
+---
+
+
 
 ### Build a New Image
 
