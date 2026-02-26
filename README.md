@@ -483,6 +483,8 @@ Install the binaries. Inject configuration templates. Defer initialization to fi
 
 ### Why Azure Compute Gallery
 
+> **⚠️ Preview Integration:** Azure Compute Gallery itself is a **generally available** Azure service with full SLA coverage. However, the **integration between ACG and Windows 365** (importing ACG image versions into Intune as custom images for Cloud PC provisioning) was in **public preview** at the time of writing. This means the ACG-to-W365 import workflow may change in behaviour, require different permissions, or introduce breaking changes before reaching GA. The preview status carries no SLA for the integration path specifically. Organizations with strict change-management policies should evaluate whether this preview dependency is acceptable for production image pipelines, or whether to continue using managed images until the ACG integration reaches GA. Monitor [learn.microsoft.com/windows-365](https://learn.microsoft.com/windows-365/) for status updates.
+
 If you've been managing Windows 365 custom images using Azure managed images, you've felt the limitations: no versioning, no Trusted Launch support, no replication, and no staged rollout capability. Azure Compute Gallery changes the equation fundamentally.
 
 For this developer image scenario, ACG provides three capabilities that matter:
