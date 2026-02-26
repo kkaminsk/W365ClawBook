@@ -254,9 +254,9 @@ You should be comfortable with PowerShell, Terraform, and Azure administration. 
 
 A software developer receives a new Windows 365 Cloud PC. They sign in and land on a desktop that has:
 
-- **OpenClaw** installed globally with a pre-seeded configuration template, the gateway starts on first login, and the developer connects their Anthropic API key to begin working immediately.
-- **Claude Code** installed globally via npm, the CLI is available in any terminal, governed by enterprise-managed settings that control permissions and allowed MCP servers.
-- **OpenAI Codex CLI** installed globally via npm, ready for developers who use OpenAI models alongside Anthropic.
+- **OpenClaw** delivered post-provisioning in user context; the gateway starts on first login after installation, and the developer connects their Anthropic API key to begin working immediately.
+- **Claude Code** delivered post-provisioning via npm in user context; the CLI is available in any terminal and governed by enterprise-managed settings that control permissions and allowed MCP servers.
+- **OpenAI Codex CLI** delivered post-provisioning in user context, ready for developers who use OpenAI models alongside Anthropic.
 - **Visual Studio Code** (System install) with GitHub Copilot pre-installed and context menu integration.
 - **Node.js 22+**, **Python 3.14+**, **Git**, **GitHub Desktop**, **Azure CLI**, and **PowerShell 7**, the complete runtime and tooling foundation, installed machine-wide so every user has access without needing admin rights.
 
@@ -334,12 +334,14 @@ graph TB
 This split is not arbitrary. It's an architectural decision driven by the constraints of Azure Image Builder's execution context and the operational reality of Windows 365.
 
 **What goes in the image:**
-- Binary installations (runtimes, tools, agents)
+- Binary installations (runtimes and tools)
 - Machine-level policy (managed-settings.json)
 - Configuration templates (in ProgramData)
 - Windows Updates
 
 **What goes in post-provisioning:**
+
+- Agents
 - Secrets and API keys (never bake these)
 - User-context configuration (VS Code extensions)
 - Identity-specific settings
@@ -445,7 +447,7 @@ Any tool that expects a user context (WinGet's App Installer dependency, VS Code
 |---|---|---|---|
 | Runtimes (Node.js, Python, PowerShell 7) | Image build | Local System | MSI/EXE silent installers |
 | Developer tools (VS Code, Git, Azure CLI) | Image build | Local System | System installers with automation flags |
-| AI agent binaries (OpenClaw, Claude Code, Codex) | Image build | Local System | `npm install -g` |
+| AI agent binaries (OpenClaw, Claude Code, Codex) | Post-provisioning | User context | Intune user-context script |
 | Enterprise policy (managed-settings.json) | Image build | Local System | File write to ProgramData |
 | Configuration templates | Image build | Local System | File write to ProgramData |
 | Agent skills (curated) | Image build | Local System | File copy to ProgramData |
@@ -617,6 +619,7 @@ Consider mapping image definitions to AI agent personas. OpenClaw supports perso
 
 | Image Definition | Target Team | Additional Runtimes | Agent Persona |
 |---|---|---|---|
+| `W365-W11-25H2-W365` | Productivity Worker | Office, Pandoc | Information Worker |
 | `W365-W11-25H2-Frontend` | Frontend developers | Node.js, Bun | React/TypeScript specialist |
 | `W365-W11-25H2-Backend` | Backend developers | Node.js, Python, Docker | API and microservices focus |
 | `W365-W11-25H2-DataSci` | Data science | Python, Conda, CUDA drivers | ML/analytics focus |
@@ -845,8 +848,6 @@ The solution exposes over 30 variables, all with sensible defaults. The critical
 | `exclude_from_latest` | `true` | Canary flag for staged rollout |
 | `node_version` | `v24.13.1` | Pinned Node.js version |
 | `python_version` | `3.14.3` | Pinned Python version (verify latest patch at python.org) |
-| `openclaw_version` | `2026.2.14` | Pinned OpenClaw version |
-| `claude_code_version` | `2.1.42` | Pinned Claude Code version |
 | `source_image_version` | `26200.7840.260206` | Pinned Windows 11 25H2 marketplace image |
 
 Every software version is pinned to a specific release. The `source_image_version` variable includes a validation rule that rejects `"latest"`:
@@ -1228,7 +1229,7 @@ if (Test-Path $codeBin) {
 
 ## Chapter 10: Phase 3 -- AI Agents
 
-Phase 3 installs OpenClaw, Claude Code, OpenSpec, and the OpenAI Codex CLI. This is the payload, the reason the image exists.
+Phase 3 describes OpenClaw, Claude Code, OpenSpec, and the OpenAI Codex CLI. In the **user-installed model**, these are **not** installed during image build; they are delivered post-provisioning via a user-context script. The code examples in this chapter remain aligned to the W365Claw repository and should not be modified.
 
 ### Prerequisites Check
 
@@ -1422,7 +1423,7 @@ if ($LASTEXITCODE -ne 0) {
 
 The Model Context Protocol (MCP) enables Claude Code and OpenClaw to interact with external services such as Jira, Microsoft Docs, Perplexity, and internal APIs. MCP servers are either npm packages (stdio transport) or HTTP endpoints (SSE transport).
 
-**Stdio MCP servers** (npm packages) should be installed globally during the image build alongside the agent binaries:
+**Stdio MCP servers** (npm packages) can be installed globally during the image build, or delivered post-provisioning alongside the agent binaries if you want all npm-based tooling in user context:
 
 ```powershell
 # -- Install MCP server packages --
@@ -2298,7 +2299,7 @@ The developer lands on a Windows 11 desktop with:
 - Node.js, Python, PowerShell 7, Git, all available from any terminal
 - VS Code with GitHub Copilot, ready to open and use
 - GitHub Desktop, in the Start menu, ready for repository cloning
-- OpenClaw, configuration pre-seeded, curated skills installed, MCP servers configured, waiting for an API key
+- OpenClaw installed post-provisioning (user context), configuration pre-seeded, curated skills installed, MCP servers configured, waiting for an API key
 - Claude Code, managed settings enforced, waiting for an API key
 - MCP integrations: Microsoft Docs (ready), Perplexity and other API-backed servers (waiting for keys)
 
@@ -2364,6 +2365,64 @@ The MCP configuration template uses placeholder values (e.g., `__PERPLEXITY_API_
 > **💡 Tip:** For teams that need centralized key management in the future, consider Intune remediation scripts that read from Azure Key Vault, or a self-service portal where developers can retrieve approved API keys. The manual approach described here is the simplest starting point and avoids storing secrets in Intune configuration profiles.
 
 > **⚠️ Warning:** On Windows 11, user-level environment variables are stored in the registry and are readable by any process running under that user's security context. For high-value secrets, consider using Windows Credential Manager or Azure Key Vault integration.
+
+### Post-Provisioning Agent Delivery (Intune)
+
+In the **user-installed model**, OpenClaw, Claude Code, and Codex are delivered **after** the Cloud PC is provisioned. The recommended delivery mechanisms are:
+
+- **Intune user-context PowerShell scripts** for fast rollout and simple updates.
+- **Intune Win32 app packages** when you need install state detection, retries, and controlled versioning.
+
+**Operational guidance:**
+
+- Target the Cloud PC device group or a dedicated agent user group.
+- Run installs in **user context** so npm global packages land in the correct user profile.
+- Keep the **image build clean**: only runtimes (Node.js, Python) and baseline tooling in the image.
+- Pin versions in the Intune payload to keep developer environments consistent.
+
+**Delivery matrix (Intune script vs Win32):**
+
+| Criterion | Intune user-context script | Intune Win32 app |
+|---|---|---|
+| Setup effort | Lowest | Moderate |
+| Version control | Manual pinning in script | Strong (detection + versioned packages) |
+| Retry behavior | Basic | Robust |
+| Rollback | Manual | Structured (supersedence) |
+| Best fit | Small teams, rapid changes | Enterprise scale, strict compliance |
+
+**Detection method guidance (Win32):**
+
+- Prefer **version-based detection** using the CLI output:
+  - `openclaw --version`
+  - `claude --version`
+  - `codex --version`
+- Return **non-zero** when the version does not match the pinned version to trigger remediation.
+- Avoid file-path detection alone; npm global paths can vary by user profile.
+- If you must use file-based detection, use the **npm global bin path** from the user context and validate the executable exists and runs.
+- Keep detection scripts **idempotent** and **fast** to avoid repeated install loops.
+
+**Example detection script (PowerShell, user context):**
+
+```powershell
+$expected = @{
+    openclaw = "2026.2.14"
+    claude   = "2.1.42"
+    codex    = "0.101.0"
+}
+
+function Get-CmdVersion([string]$cmd) {
+    $v = & $cmd --version 2>$null
+    if (-not $v) { return $null }
+    return ($v -replace '[^0-9\.]','').Trim()
+}
+
+foreach ($k in $expected.Keys) {
+    $ver = Get-CmdVersion $k
+    if (-not $ver -or $ver -ne $expected[$k]) { exit 1 }
+}
+
+exit 0
+```
 
 ### Azure Key Vault Delivery Flow (Enterprise)
 
@@ -2489,7 +2548,7 @@ This ensures extensions are installed into the correct user profile and can be u
 
 ## Chapter 25: Agent Updates Without Reprovisioning
 
-Since both OpenClaw and Claude Code are installed globally via npm, a post-provisioning Intune script can update them on running Cloud PCs, with no reprovisioning required:
+Since OpenClaw and Claude Code are installed post-provisioning via npm, an Intune user-context script can update them on running Cloud PCs, with no reprovisioning required:
 
 ```powershell
 # Update all AI agents to latest approved versions
@@ -2647,7 +2706,7 @@ Microsoft is developing **Entra Agent ID** to formalize this architecture. Key f
 - **Agent Registry**: Centralized inventory of authorized agents linked to human "sponsors"
 - **Scoped Permissions**: Policies restrict agents to specific workspaces and resources
 
-**Recommendation:** Until Entra Agent ID reaches GA, provision **Secondary Entra ID Users** for agents. This provides immediate segregation and auditability, and the identity is not tied to the Cloud PC. A developer can use the same secondary agent account from their local development machine to authenticate to Azure CLI, Azure DevOps, or any Entra-integrated service, running agent workloads locally while retaining the audit separation and scoped permissions of the dedicated identity. This makes the secondary user approach useful even without Windows 365: it works anywhere `az login` does.
+**Recommendation:** Entra Agent ID is a compelling long-term solution, but its **preview status** should give production-oriented teams pause. Preview features carry no SLA, may introduce breaking changes, and can be deprecated before reaching GA. Organizations with strict change-management or compliance requirements will find it difficult to justify a preview dependency in their identity architecture. Until Entra Agent ID reaches GA with stable APIs, SLA coverage, and a clear licensing model, provision **Secondary Entra ID Users** for agents. This provides immediate segregation and auditability using GA-supported primitives, and the identity is not tied to the Cloud PC. A developer can use the same secondary agent account from their local development machine to authenticate to Azure CLI, Azure DevOps, or any Entra-integrated service, running agent workloads locally while retaining the audit separation and scoped permissions of the dedicated identity. This makes the secondary user approach useful even without Windows 365: it works anywhere `az login` does. When Entra Agent ID reaches GA, migrating from secondary users to Agent IDs should be straightforward — the scoping and Conditional Access patterns are architecturally aligned.
 
 ### Operational Workflow
 
@@ -3797,13 +3856,13 @@ try {
 | **GitHub Desktop** | Latest | Machine-Wide MSI | Image Build / Local System | Hydrates into user profile at first login |
 | **Azure CLI** | 2.83.0 | MSI (`ALLUSERS=1`) | Image Build / Local System | Used for Terraform authentication |
 | **GitHub Copilot** | Latest | VS Code extension | Image Build / Local System | Installed via `code.cmd --install-extension` |
-| **OpenClaw** | 2026.2.14 | `npm install -g` | Image Build / Local System | Never run `openclaw onboard` during build |
-| **Claude Code** | 2.1.42 | `npm install -g` | Image Build / Local System | Never run `claude login` during build |
-| **OpenSpec** | 0.9.1 | `npm install -g` | Image Build / Local System | Pin version (was `latest`) |
-| **Codex CLI** | 0.101.0 | `npm install -g` | Image Build / Local System | OpenAI's code generation CLI |
+| **OpenClaw** | 2026.2.14 | `npm install -g` | Post-Provisioning / User Context | Never run `openclaw onboard` during build |
+| **Claude Code** | 2.1.42 | `npm install -g` | Post-Provisioning / User Context | Never run `claude login` during build |
+| **OpenSpec** | 0.9.1 | `npm install -g` | Post-Provisioning / User Context | Pin version (was `latest`) |
+| **Codex CLI** | 0.101.0 | `npm install -g` | Post-Provisioning / User Context | OpenAI's code generation CLI |
 | **OpenClaw Config** | -- | Template + Active Setup | Image Build + First Login | Template in ProgramData, copied to user profile |
 | **Agent Skills (curated)** | -- | Git clone / file copy | Image Build + First Login | Vetted via Cisco Skill Scanner; copied to `~/.agents/skills/` |
-| **MCP Servers (stdio)** | -- | `npm install -g` | Image Build / Local System | Same install context as agent binaries |
+| **MCP Servers (stdio)** | -- | `npm install -g` | Image Build / Local System or Post-Provisioning / User Context | Align install context with your agent delivery model |
 | **MCP Server Config** | -- | Template + Active Setup | Image Build + First Login | API key placeholders; real keys via Intune env vars or Azure Key Vault. |
 | **Claude Code Policy** | -- | `managed-settings.json` | Image Build / Local System | Machine-level enterprise governance |
 | **API Keys** | -- | Azure Keyvault / Intune Settings Catalog | Post-Provisioning | **Never bake secrets into the image** |
