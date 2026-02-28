@@ -261,6 +261,8 @@ A software developer receives a new Windows 365 Cloud PC. They sign in and land 
 
 No manual setup. No "run this script first." No waiting for Intune to push 15 apps over 45 minutes. The heavy lifting is done in the image; the personalization happens at login.
 
+> **💡 Note on Windows Subsystem for Linux (WSL):** OpenClaw's official installation documentation recommends Windows Subsystem for Linux as a path to installing OpenClaw on Windows. This book intentionally does not follow that recommendation. WSL introduces a full Linux distribution running inside a lightweight virtual machine on the Windows host — a configuration that creates security ambiguity for enterprise environments. Questions around Intune policy enforcement boundaries, Defender for Endpoint visibility into WSL processes, network segmentation applicability, and audit log completeness remain incompletely addressed in most enterprise security frameworks. Rather than layer that complexity into the deployment, this book installs OpenClaw natively on Windows via Node.js and npm, which keeps the agent fully within the Windows security boundary where Intune, Defender, and Conditional Access operate with full fidelity.
+
 ---
 
 ## Chapter 2: Architecture Overview
