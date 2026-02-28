@@ -62,8 +62,7 @@ This guide is accurate as of February 25, 2026. Microsoft services, marketplace 
   - [Chapter 7: Preparing the Build Workstation](#chapter-7-preparing-the-build-workstation)
   - [Chapter 8: Phase 1 -- Core Runtimes](#chapter-8-phase-1--core-runtimes)
   - [Chapter 9: Phase 2 -- Developer Tools](#chapter-9-phase-2--developer-tools)
-  - [Chapter 10: Phase 3 -- AI Agents](#chapter-10-phase-3--ai-agents)
-  - [Chapter 11: Phase 4 -- Configuration and Policy](#chapter-11-phase-4--configuration-and-policy)
+  - [Chapter 10: Phase 3 -- Configuration and Policy](#chapter-10-phase-3--configuration-and-policy)
   - [Chapter 12: Windows Update and Sysprep](#chapter-12-windows-update-and-sysprep)
   - [Chapter 13: Supply Chain Integrity](#chapter-13-supply-chain-integrity)
 - [Part IV: Operations](#part-iv-operations)
@@ -276,7 +275,7 @@ The solution spans four layers: infrastructure definition, image build, Windows 
 graph TB
     subgraph "Source Control (Git)"
         TF[Terraform HCL<br/>Gallery, Identity, AIB]
-        PS[Inline PowerShell<br/>Phase 1-4 Customizers]
+        PS[Inline PowerShell<br/>Phase 1-3 Customizers]
     end
 
     subgraph "Build Pipeline"
@@ -321,7 +320,7 @@ graph TB
 
 > **💡 Note: Why inline scripts?** Storing PowerShell in external files (Azure Blob Storage, Git raw URLs) would reduce HCL file size but introduce external dependencies: the build would fail if the storage account is misconfigured, the SAS token expires, or the Git URL changes. Inline scripts keep the entire build definition self-contained in a single `terraform apply`. The companion repository includes a setup script (`Initialize-TerraformVars.ps1`) that populates all variables and prepares the tenant, so the inline approach remains manageable even as the scripts grow. For teams that prefer external scripts, the same PowerShell can be extracted to blob storage with minimal changes to the AIB template.
 
-**Layer 2: Build Pipeline.** A manual `terraform apply` deploys the infrastructure and triggers the AIB build. The build VM (Standard_D4s_v5 by default) downloads installers, runs four phases of PowerShell customization, applies Windows Updates, and runs Sysprep. The result is a generalized VHD published to the Azure Compute Gallery. Build time: 75--120 minutes.
+**Layer 2: Build Pipeline.** A manual `terraform apply` deploys the infrastructure and triggers the AIB build. The build VM (Standard_D4s_v5 by default) downloads installers, runs three phases of PowerShell customization, applies Windows Updates, and runs Sysprep. The result is a generalized VHD published to the Azure Compute Gallery. Build time: 75--120 minutes.
 
 > **💡 Tip:** The default build VM is `Standard_D4s_v5` (4 vCPU, 16 GB) to improve build reliability and speed. If cost is a priority and longer builds are acceptable, downgrade to `Standard_D2s_v5` (2 vCPU, 8 GB RAM) in `terraform.tfvars`.
 
@@ -447,11 +446,12 @@ Any tool that expects a user context (WinGet's App Installer dependency, VS Code
 |---|---|---|---|
 | Runtimes (Node.js, Python, PowerShell 7) | Image build | Local System | MSI/EXE silent installers |
 | Developer tools (VS Code, Git, Azure CLI) | Image build | Local System | System installers with automation flags |
-| AI agent binaries (OpenClaw, Claude Code, Codex) | Post-provisioning | User context | Intune user-context script |
+| AI agent binaries (OpenClaw, Claude Code, Codex) | Post-provisioning | User context | Intune Win32 app (required, per-user) |
+| OpenSpec | Post-provisioning | User context | Intune Win32 app (required, per-user) |
 | Enterprise policy (managed-settings.json) | Image build | Local System | File write to ProgramData |
 | Configuration templates | Image build | Local System | File write to ProgramData |
 | Agent skills (curated) | Image build | Local System | File copy to ProgramData |
-| MCP server binaries | Image build | Local System | `npm install -g` or file copy |
+| MCP server binaries | Post-provisioning | User context | Intune Win32 app (available, per-user) |
 | MCP server configuration | Image build | Local System | Template in ProgramData |
 | API keys and credentials | Post-provisioning | Machine (Intune) | Environment variables via Settings Catalog |
 | VS Code extensions | Post-provisioning | User context | Intune script |
@@ -509,15 +509,14 @@ Packer remains a strong choice if you need cross-cloud image builds (AWS AMIs + 
 
 Before you build anything, the ACG image definition must satisfy Windows 365's compatibility contract. The image definition **must** include all five of the following features:
 
-| Feature | Value | Purpose |
-|---------|-------|---------|
-| `SecurityType` | `TrustedLaunchSupported` | Enables Secure Boot and vTPM |
-| `IsHibernateSupported` | `True` | Required for Cloud PC hibernation |
-| `DiskControllerTypes` | `SCSI,NVMe` | Supports both controller types |
-| `IsAcceleratedNetworkSupported` | `True` | Required for accelerated networking |
-| `IsSecureBootSupported` | `True` | Explicit Secure Boot declaration |
+| Terraform Attribute | Purpose |
+|---------|---------|
+| `trusted_launch_enabled = true` | Enables Trusted Launch (Secure Boot + vTPM) |
+| `hibernation_enabled = true` | Required for Cloud PC hibernation |
+| `disk_controller_type_nvme_enabled = true` | Supports NVMe disk controller |
+| `accelerated_network_support_enabled = true` | Required for accelerated networking |
 
-> **⚠️ Warning:** Missing any one of these features will cause the import into Windows 365 to fail. This is non-negotiable. The error message from Intune is often unhelpful; if your import fails, check these features first.
+> **⚠️ Warning:** Missing any of these feature attributes will cause the import into Windows 365 to fail. This is non-negotiable. The error message from Intune is often unhelpful; if your import fails, check these attributes first. Note that AzureRM provider 4.x uses dedicated boolean attributes instead of the legacy `features {}` blocks.
 
 Additionally, the image definition must declare:
 
@@ -538,6 +537,10 @@ resource "azurerm_shared_image_gallery" "this" {
   resource_group_name = var.resource_group_name
   location            = var.location
   tags                = var.tags
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "azurerm_shared_image" "this" {
@@ -556,35 +559,17 @@ resource "azurerm_shared_image" "this" {
   }
 
   # -- Windows 365 ACG Import Requirements --
-  # All five features are mandatory for Windows 365 ingestion.
-  # Missing any one will cause the import to fail.
-
-  features {
-    name  = "SecurityType"
-    value = "TrustedLaunchSupported"
-  }
-
-  features {
-    name  = "IsHibernateSupported"
-    value = "True"
-  }
-
-  features {
-    name  = "DiskControllerTypes"
-    value = "SCSI,NVMe"
-  }
-
-  features {
-    name  = "IsAcceleratedNetworkSupported"
-    value = "True"
-  }
-
-  features {
-    name  = "IsSecureBootSupported"
-    value = "True"
-  }
+  # These features are mandatory for Windows 365 ingestion.
+  trusted_launch_enabled              = true
+  hibernation_enabled                 = true
+  disk_controller_type_nvme_enabled   = true
+  accelerated_network_support_enabled = true
 
   tags = var.tags
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 ```
 
@@ -663,30 +648,50 @@ Instead of granting the broad `Contributor` role, the solution assigns exactly f
 ```hcl
 # 1. Virtual Machine Contributor -- create/manage the build VM
 resource "azurerm_role_assignment" "aib_vm_contributor" {
-  scope                = var.resource_group_id
-  role_definition_name = "Virtual Machine Contributor"
-  principal_id         = azurerm_user_assigned_identity.aib.principal_id
+  scope                            = var.resource_group_id
+  role_definition_name             = "Virtual Machine Contributor"
+  principal_id                     = azurerm_user_assigned_identity.aib.principal_id
+  skip_service_principal_aad_check = true
+
+  lifecycle {
+    ignore_changes = [skip_service_principal_aad_check]
+  }
 }
 
 # 2. Network Contributor -- create transient networking for the build VM
 resource "azurerm_role_assignment" "aib_network_contributor" {
-  scope                = var.resource_group_id
-  role_definition_name = "Network Contributor"
-  principal_id         = azurerm_user_assigned_identity.aib.principal_id
+  scope                            = var.resource_group_id
+  role_definition_name             = "Network Contributor"
+  principal_id                     = azurerm_user_assigned_identity.aib.principal_id
+  skip_service_principal_aad_check = true
+
+  lifecycle {
+    ignore_changes = [skip_service_principal_aad_check]
+  }
 }
 
 # 3. Managed Identity Operator -- assign the identity to the build VM
 resource "azurerm_role_assignment" "aib_identity_operator" {
-  scope                = var.resource_group_id
-  role_definition_name = "Managed Identity Operator"
-  principal_id         = azurerm_user_assigned_identity.aib.principal_id
+  scope                            = var.resource_group_id
+  role_definition_name             = "Managed Identity Operator"
+  principal_id                     = azurerm_user_assigned_identity.aib.principal_id
+  skip_service_principal_aad_check = true
+
+  lifecycle {
+    ignore_changes = [skip_service_principal_aad_check]
+  }
 }
 
-# 4. Compute Gallery Image Contributor -- write image versions to the gallery
+# 4. Compute Gallery Artifacts Publisher -- write image versions to the gallery
 resource "azurerm_role_assignment" "aib_gallery_contributor" {
-  scope                = var.gallery_id
-  role_definition_name = "Compute Gallery Image Contributor"
-  principal_id         = azurerm_user_assigned_identity.aib.principal_id
+  scope                            = var.gallery_id
+  role_definition_name             = "Compute Gallery Artifacts Publisher"
+  principal_id                     = azurerm_user_assigned_identity.aib.principal_id
+  skip_service_principal_aad_check = true
+
+  lifecycle {
+    ignore_changes = [skip_service_principal_aad_check]
+  }
 }
 ```
 
@@ -695,9 +700,9 @@ resource "azurerm_role_assignment" "aib_gallery_contributor" {
 | Virtual Machine Contributor | Resource Group | Create/manage the ephemeral build VM |
 | Network Contributor | Resource Group | Create transient vNIC/NSG for the build VM |
 | Managed Identity Operator | Resource Group | Assign the identity to the build VM |
-| Compute Gallery Image Contributor | Gallery | Write image versions to ACG |
+| Compute Gallery Artifacts Publisher | Gallery | Write image versions to ACG |
 
-> **💡 Tip:** When creating a managed identity and assigning roles in the same `terraform apply`, the Entra ID principal may not have propagated yet, causing intermittent failures. Add `skip_service_principal_aad_check = true` to each `azurerm_role_assignment`, or use a `time_sleep` resource between identity creation and role assignment.
+> **💡 Tip:** When creating a managed identity and assigning roles in the same `terraform apply`, the Entra ID principal may not have propagated yet, causing intermittent failures. The solution includes `skip_service_principal_aad_check = true` on each `azurerm_role_assignment` to handle this, with `lifecycle { ignore_changes }` to prevent perpetual diffs.
 
 ### Why Not Contributor?
 
@@ -760,7 +765,8 @@ terraform/
     \---- image-builder/
         |---- main.tf                  # AIB template + trigger (inline scripts)
         |---- variables.tf
-        \---- outputs.tf
+        |---- outputs.tf
+        \---- versions.tf             # azapi + time provider requirements
 ```
 
 ### Module Design
@@ -780,7 +786,7 @@ graph LR
     ID -->|managed_identity_id| AIB
 ```
 
-**Gallery Module** creates the Azure Compute Gallery and image definition with all five Windows 365 feature flags. Both resources have `lifecycle { prevent_destroy = true }` to prevent accidental deletion.
+**Gallery Module** creates the Azure Compute Gallery and image definition with Windows 365 feature flags (Trusted Launch, hibernation, NVMe disk controller, accelerated networking). Both resources have `lifecycle { prevent_destroy = true }` to prevent accidental deletion.
 
 **Identity Module** creates the user-assigned managed identity and four RBAC assignments. It takes the resource group ID (for VM/Network/Identity roles) and gallery ID (for image contributor role) as inputs.
 
@@ -1126,6 +1132,8 @@ if ($proc.ExitCode -ne 0) {
 }
 ```
 
+> **⚠️ Note:** The URL path must be `win32-x64-system` (System Installer), not `win32-x64` (User Installer). The W365Claw Terraform code currently uses `win32-x64` — this is a known bug that should be corrected to `win32-x64-system` before production builds. The User Installer places binaries in the Local System profile during the image build, making VS Code invisible to the actual developer.
+
 The critical argument is `/MERGETASKS="!runcode,addcontextmenufiles,addcontextmenufolders,addtopath"`:
 
 | Task | Purpose |
@@ -1229,117 +1237,16 @@ if (Test-Path $codeBin) {
 
 ---
 
-## Chapter 10: Phase 3 -- AI Agents
+## Chapter 10: Phase 3 -- Configuration and Policy
 
-Phase 3 describes OpenClaw, Claude Code, OpenSpec, and the OpenAI Codex CLI. In the **user-installed model**, these are **not** installed during image build; they are delivered post-provisioning via a user-context script. The code examples in this chapter remain aligned to the W365Claw repository and should not be modified.
+Phase 3 is where the image transforms from "tools installed" to "enterprise-ready." This phase configures Claude Code enterprise policy, creates the OpenClaw configuration template, registers Active Setup for first-login hydration, sets Teams optimisation prerequisites, generates the SBOM, and cleans up the image.
 
-### Prerequisites Check
-
-Before installing anything, verify that Phase 1 succeeded:
-
-```powershell
-Update-SessionEnvironment
-
-$nodeCheck = Get-Command node -ErrorAction SilentlyContinue
-$npmCheck = Get-Command npm -ErrorAction SilentlyContinue
-if (-not $nodeCheck -or -not $npmCheck) {
-    Write-Error "Node.js or npm not found in PATH. Phase 1 may have failed."
-    exit 1
-}
-Write-Host "[PREREQ] Node.js: $(node --version)"
-Write-Host "[PREREQ] npm: $(npm --version)"
-```
-
-### OpenClaw
-
-```powershell
-Write-Host "=== Installing OpenClaw ${var.openclaw_version} (global) ==="
-npm install -g openclaw@${var.openclaw_version} 2>&1 | Write-Host
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "OpenClaw npm install failed ($LASTEXITCODE)"
-    exit 1
-}
-Update-SessionEnvironment
-
-$openclawCheck = Get-Command openclaw -ErrorAction SilentlyContinue
-if (-not $openclawCheck) {
-    Write-Error "openclaw not found in PATH after installation"
-    exit 1
-}
-Write-Host "[VERIFY] OpenClaw: $(openclaw --version 2>&1)"
-```
-
-### Claude Code
-
-```powershell
-Write-Host "=== Installing Claude Code ${var.claude_code_version} (global) ==="
-npm install -g @anthropic-ai/claude-code@${var.claude_code_version} 2>&1 | Write-Host
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "Claude Code npm install failed ($LASTEXITCODE)"
-    exit 1
-}
-Update-SessionEnvironment
-
-$claudeCheck = Get-Command claude -ErrorAction SilentlyContinue
-if (-not $claudeCheck) {
-    Write-Error "claude not found in PATH after installation"
-    exit 1
-}
-Write-Host "[VERIFY] Claude Code: $(claude --version 2>&1)"
-```
-
-### OpenSpec and Codex CLI
-
-```powershell
-# OpenSpec
-npm install -g @fission-ai/openspec@${var.openspec_version} 2>&1 | Write-Host
-if ($LASTEXITCODE -ne 0) { Write-Error "OpenSpec install failed"; exit 1 }
-
-# OpenAI Codex CLI
-npm install -g @openai/codex@${var.codex_version} 2>&1 | Write-Host
-if ($LASTEXITCODE -ne 0) { Write-Error "Codex CLI install failed"; exit 1 }
-```
-
-### SBOM Generation
-
-After all agents are installed, the build generates a Software Bill of Materials:
-
-```powershell
-$sbomDir = "C:\ProgramData\ImageBuild"
-New-Item -ItemType Directory -Path $sbomDir -Force | Out-Null
-
-# npm global package tree
-$globalPackages = npm list -g --json 2>$null
-Set-Content -Path "$sbomDir\sbom-npm-global.json" -Value $globalPackages -Encoding UTF8
-
-# Software manifest with all installed versions
-$softwareManifest = @{
-    buildDate       = (Get-Date -Format "yyyy-MM-dd'T'HH:mm:ss'Z'")
-    nodeVersion     = (node --version 2>&1).ToString()
-    npmVersion      = (npm --version 2>&1).ToString()
-    pythonVersion   = (python --version 2>&1).ToString()
-    gitVersion      = (git --version 2>&1).ToString()
-    pwshVersion     = (pwsh --version 2>&1).ToString()
-    azCliVersion    = (az --version 2>&1 | Select-Object -First 1).ToString()
-    openclawVersion = (openclaw --version 2>&1).ToString()
-    claudeVersion   = (claude --version 2>&1).ToString()
-    openspecVersion = (openspec --version 2>&1).ToString()
-    codexVersion    = (codex --version 2>&1).ToString()
-} | ConvertTo-Json -Depth 3
-Set-Content -Path "$sbomDir\sbom-software-manifest.json" -Value $softwareManifest -Encoding UTF8
-```
-
-The SBOM serves two purposes:
-1. **Audit trail**: You can verify exactly what was installed in any given image version
-2. **Incident response**: If a vulnerability is discovered in a specific version of a dependency, you can quickly identify which image versions are affected
-
-> **💡 Tip:** `npm audit --global` has limited support and may not detect vulnerabilities reliably in the global install tree. The version pin + SBOM generation is the primary control for global npm packages.
-
----
-
-## Chapter 11: Phase 4 -- Configuration and Policy
-
-Phase 4 is where the image transforms from "tools installed" to "enterprise-ready." This phase configures Claude Code enterprise policy, creates the OpenClaw configuration template, registers Active Setup for first-login hydration, sets Teams optimisation prerequisites, and cleans up the image.
+> **💡 Note:** In earlier versions of this solution, a separate build phase installed OpenSpec and MCP server npm packages into the image. These have been moved to **post-provisioning** and are delivered via Intune:
+>
+> - **AI agents** (OpenClaw, Claude Code, Codex CLI) and **OpenSpec** are deployed as **required** Win32 apps targeted per-user, ensuring they are present on every developer Cloud PC automatically.
+> - **MCP servers** are deployed as **available** Win32 apps targeted per-user, allowing developers to install them on demand from the Intune Company Portal. This ensures agents are fully installed before MCP server configuration occurs.
+>
+> This keeps the image focused on runtimes, developer tools, and enterprise policy. See Chapter 22 and Chapter 25 for the post-provisioning delivery model.
 
 ### Claude Code Enterprise Managed Settings
 
@@ -1425,18 +1332,7 @@ if ($LASTEXITCODE -ne 0) {
 
 The Model Context Protocol (MCP) enables Claude Code and OpenClaw to interact with external services such as Jira, Microsoft Docs, Perplexity, and internal APIs. MCP servers are either npm packages (stdio transport) or HTTP endpoints (SSE transport).
 
-**Stdio MCP servers** (npm packages) can be installed globally during the image build, or delivered post-provisioning alongside the agent binaries if you want all npm-based tooling in user context:
-
-```powershell
-# -- Install MCP server packages --
-Write-Host "=== Installing MCP server packages ==="
-
-# Perplexity MCP server (web search)
-npm install -g @perplexity-ai/mcp-server 2>&1 | Write-Host
-
-# Add other approved MCP servers here
-# npm install -g @your-org/internal-mcp-server 2>&1 | Write-Host
-```
+**Stdio MCP servers** (npm packages) are delivered **post-provisioning** as **available** Win32 apps in Intune, targeted per-user. Developers install them on demand from the Intune Company Portal. Deploying MCP servers as available (rather than required) ensures the AI agents and OpenSpec are fully installed first — MCP servers depend on the agents being present for configuration and runtime invocation.
 
 **HTTP/SSE MCP servers** (remote endpoints) don't require binary installation; they're configured via the MCP configuration file.
 
@@ -1698,7 +1594,9 @@ npm's built-in integrity checking (via `package-lock.json` SHA512 hashes) does n
 
 ### Pinned Versions
 
-All software versions are pinned in Terraform variables:
+Software versions are pinned at two levels: **Terraform variables** for image-build components, and **Intune script versions** for post-provisioning agents.
+
+**Image-build pins (Terraform variables):**
 
 | Package | Version | Pin Method |
 |---------|---------|-----------|
@@ -1707,12 +1605,17 @@ All software versions are pinned in Terraform variables:
 | PowerShell 7 | 7.4.13 | MSI URL with version in path |
 | Git | 2.53.0 | EXE URL with version in path |
 | Azure CLI | 2.83.0 | MSI URL with version in path |
+
+**Post-provisioning pins (Intune script versions):**
+
+| Package | Version | Pin Method |
+|---------|---------|-----------|
+| OpenSpec | 0.9.1 | `npm install -g @fission-ai/openspec@0.9.1` |
 | OpenClaw | 2026.2.14 | `npm install -g openclaw@2026.2.14` |
 | Claude Code | 2.1.42 | `npm install -g @anthropic-ai/claude-code@2.1.42` |
-| OpenSpec | 0.9.1 | `npm install -g @fission-ai/openspec@0.9.1` |
 | Codex CLI | 0.101.0 | `npm install -g @openai/codex@0.101.0` |
 
-> **💡 Tip:** OpenSpec was originally defaulted to `"latest"`, making builds non-reproducible. This was remediated as part of the supply chain integrity work. Always pin to an exact version.
+Post-provisioning pins are managed outside Terraform, in Intune platform scripts. This decouples agent and tooling release cycles from image builds — agents can be updated on running Cloud PCs without reprovisioning (see Chapter 25). Always pin to exact versions; never use `latest`.
 
 ---
 
@@ -1757,8 +1660,7 @@ graph TD
     G --> H[Phase 1: Core Runtimes<br/>~20 min]
     H --> I[Restart]
     I --> J[Phase 2: Developer Tools<br/>~10 min]
-    J --> K[Phase 3: AI Agents<br/>~10 min]
-    K --> L[Phase 4: Configuration<br/>~5 min]
+    J --> L[Phase 3: Configuration<br/>~5 min]
     L --> M[Windows Update<br/>~20-40 min]
     M --> N[Final Restart]
     N --> O[Sysprep + Capture<br/>~10 min]
@@ -1773,8 +1675,7 @@ graph TD
 | Infrastructure deployment | 2--5 minutes |
 | Phase 1: Core Runtimes | ~15 minutes |
 | Phase 2: Developer Tools | ~10 minutes |
-| Phase 3: AI Agents | ~10 minutes |
-| Phase 4: Configuration | ~5 minutes |
+| Phase 3: Configuration & Policy | ~5 minutes |
 | Windows Update | 20--40 minutes (varies) |
 | Sysprep + Capture | ~10 minutes |
 | **Total** | **60--90 minutes** |
@@ -1817,19 +1718,21 @@ Get-AzGalleryImageVersion `
 
 ### Software Verification (Create a Test VM)
 
-Create a temporary VM from the image and verify:
+Create a temporary VM from the image and verify the **build-time installed** components:
 
 - [ ] `node --version` returns v24+
 - [ ] `python --version` returns 3.14+
 - [ ] `pwsh --version` returns PowerShell 7.4+
 - [ ] `git --version` returns expected version
 - [ ] `az --version` returns expected Azure CLI version
-- [ ] `openclaw --version` returns expected version
-- [ ] `claude --version` returns expected version
-- [ ] `openspec --version` returns expected version
-- [ ] `codex --version` returns expected version
 - [ ] VS Code installed in `C:\Program Files\Microsoft VS Code`
 - [ ] `code --list-extensions` includes `GitHub.copilot` and `GitHub.copilot-chat`
+
+After post-provisioning agent delivery (via Intune), additionally verify:
+
+- [ ] `openclaw --version` returns expected version
+- [ ] `claude --version` returns expected version
+- [ ] `codex --version` returns expected version
 
 ### Configuration Verification
 
@@ -2370,10 +2273,19 @@ The MCP configuration template uses placeholder values (e.g., `__PERPLEXITY_API_
 
 ### Post-Provisioning Agent Delivery (Intune)
 
-In the **user-installed model**, OpenClaw, Claude Code, and Codex are delivered **after** the Cloud PC is provisioned. The recommended delivery mechanisms are:
+In the **user-installed model**, all npm-based tooling — AI agents, OpenSpec, and MCP servers — is delivered **after** the Cloud PC is provisioned via **Intune Win32 app packages** targeted per-user. This provides install state detection, retries, controlled versioning, and a clear dependency ordering.
 
-- **Intune user-context PowerShell scripts** for fast rollout and simple updates.
-- **Intune Win32 app packages** when you need install state detection, retries, and controlled versioning.
+**Delivery tiers:**
+
+| Package | Intune Assignment | Rationale |
+|---|---|---|
+| OpenClaw | **Required** (per-user) | Core agent; must be present on every developer Cloud PC |
+| Claude Code | **Required** (per-user) | Core agent; must be present on every developer Cloud PC |
+| Codex CLI | **Required** (per-user) | Core agent; must be present on every developer Cloud PC |
+| OpenSpec | **Required** (per-user) | Development workflow tooling; needed alongside agents |
+| MCP servers (Perplexity, Jira, etc.) | **Available** (per-user) | Optional; developers install from Company Portal on demand |
+
+**Why this ordering matters:** MCP servers depend on the AI agents being present — they are invoked by agents at runtime and their configuration references agent workspace paths. By making agents and OpenSpec **required** and MCP servers **available**, Intune ensures the foundation is in place before optional integrations are added. Developers choose which MCP servers they need from the Company Portal, avoiding unnecessary installs and reducing the attack surface.
 
 **Operational guidance:**
 
@@ -2382,22 +2294,13 @@ In the **user-installed model**, OpenClaw, Claude Code, and Codex are delivered 
 - Keep the **image build clean**: only runtimes (Node.js, Python) and baseline tooling in the image.
 - Pin versions in the Intune payload to keep developer environments consistent.
 
-**Delivery matrix (Intune script vs Win32):**
-
-| Criterion | Intune user-context script | Intune Win32 app |
-|---|---|---|
-| Setup effort | Lowest | Moderate |
-| Version control | Manual pinning in script | Strong (detection + versioned packages) |
-| Retry behavior | Basic | Robust |
-| Rollback | Manual | Structured (supersedence) |
-| Best fit | Small teams, rapid changes | Enterprise scale, strict compliance |
-
 **Detection method guidance (Win32):**
 
 - Prefer **version-based detection** using the CLI output:
   - `openclaw --version`
   - `claude --version`
   - `codex --version`
+  - `openspec --version`
 - Return **non-zero** when the version does not match the pinned version to trigger remediation.
 - Avoid file-path detection alone; npm global paths can vary by user profile.
 - If you must use file-based detection, use the **npm global bin path** from the user context and validate the executable exists and runs.
@@ -2410,6 +2313,7 @@ $expected = @{
     openclaw = "2026.2.14"
     claude   = "2.1.42"
     codex    = "0.101.0"
+    openspec = "0.9.1"
 }
 
 function Get-CmdVersion([string]$cmd) {
@@ -2553,11 +2457,12 @@ This ensures extensions are installed into the correct user profile and can be u
 Since OpenClaw and Claude Code are installed post-provisioning via npm, an Intune user-context script can update them on running Cloud PCs, with no reprovisioning required:
 
 ```powershell
-# Update all AI agents to latest approved versions
+# Update all AI agents and tooling to latest approved versions
 npm update -g openclaw
 npm update -g @anthropic-ai/claude-code
-npm update -g @fission-ai/openspec
 npm update -g @openai/codex
+npm update -g @fission-ai/openspec
+npm update -g @perplexity-ai/mcp-server
 ```
 
 For controlled updates with specific versions:
@@ -3235,7 +3140,7 @@ Three or more non-compliant detections within an hour suggests a persistent issu
 For environments where Intune remediation frequency (minimum hourly) is too slow, deploy a Windows Scheduled Task as a lightweight watchdog during the image build:
 
 ```powershell
-# In Phase 4 of the image build
+# In Phase 3 of the image build
 $watchdogScript = @'
 $gatewayRunning = Get-Process -Name "node" -ErrorAction SilentlyContinue |
     Where-Object { $_.CommandLine -match "openclaw" }
@@ -3858,13 +3763,13 @@ try {
 | **GitHub Desktop** | Latest | Machine-Wide MSI | Image Build / Local System | Hydrates into user profile at first login |
 | **Azure CLI** | 2.83.0 | MSI (`ALLUSERS=1`) | Image Build / Local System | Used for Terraform authentication |
 | **GitHub Copilot** | Latest | VS Code extension | Image Build / Local System | Installed via `code.cmd --install-extension` |
-| **OpenClaw** | 2026.2.14 | `npm install -g` | Post-Provisioning / User Context | Never run `openclaw onboard` during build |
-| **Claude Code** | 2.1.42 | `npm install -g` | Post-Provisioning / User Context | Never run `claude login` during build |
-| **OpenSpec** | 0.9.1 | `npm install -g` | Post-Provisioning / User Context | Pin version (was `latest`) |
-| **Codex CLI** | 0.101.0 | `npm install -g` | Post-Provisioning / User Context | OpenAI's code generation CLI |
+| **OpenClaw** | 2026.2.14 | `npm install -g` | Post-Provisioning / User Context | Intune Win32 required app; never run `openclaw onboard` during build |
+| **Claude Code** | 2.1.42 | `npm install -g` | Post-Provisioning / User Context | Intune Win32 required app; never run `claude login` during build |
+| **OpenSpec** | 0.9.1 | `npm install -g` | Post-Provisioning / User Context | Intune Win32 required app (per-user) |
+| **Codex CLI** | 0.101.0 | `npm install -g` | Post-Provisioning / User Context | Intune Win32 required app; OpenAI's code generation CLI |
 | **OpenClaw Config** | -- | Template + Active Setup | Image Build + First Login | Template in ProgramData, copied to user profile |
 | **Agent Skills (curated)** | -- | Git clone / file copy | Image Build + First Login | Vetted via Cisco Skill Scanner; copied to `~/.agents/skills/` |
-| **MCP Servers (stdio)** | -- | `npm install -g` | Image Build / Local System or Post-Provisioning / User Context | Align install context with your agent delivery model |
+| **MCP Servers (stdio)** | -- | `npm install -g` | Post-Provisioning / User Context | Intune Win32 available app (per-user); installed from Company Portal on demand |
 | **MCP Server Config** | -- | Template + Active Setup | Image Build + First Login | API key placeholders; real keys via Intune env vars or Azure Key Vault. |
 | **Claude Code Policy** | -- | `managed-settings.json` | Image Build / Local System | Machine-level enterprise governance |
 | **API Keys** | -- | Azure Keyvault / Intune Settings Catalog | Post-Provisioning | **Never bake secrets into the image** |
