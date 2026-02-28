@@ -302,7 +302,7 @@ graph TB
     end
 
     subgraph "Post-Provisioning"
-        INTUNE[Intune Delivers:<br/>-- API Keys via Settings Catalog<br/>-- VS Code Extensions<br/>-- Security Baselines]
+        INTUNE[Intune Delivers:<br/>-- API Keys via Intune Script<br/>-- VS Code Extensions<br/>-- Security Baselines]
         LOGIN[First Login:<br/>-- Active Setup Hydration<br/>-- GitHub Desktop Hydration<br/>-- OpenClaw Config Copy]
     end
 
@@ -455,7 +455,7 @@ Any tool that expects a user context (WinGet's App Installer dependency, VS Code
 | Agent skills (curated) | Image build | Local System | File copy to ProgramData |
 | MCP server binaries | Post-provisioning | User context | Intune Win32 app (available, per-user) |
 | MCP server configuration | Image build | Local System | Template in ProgramData |
-| API keys and credentials | Post-provisioning | Machine (Intune) | Environment variables via Settings Catalog |
+| API keys and credentials | Post-provisioning | User context (Intune) | Environment variables via Intune script |
 | VS Code extensions | Post-provisioning | User context | Intune script |
 | OpenClaw config hydration | First login | User context | Active Setup registry entry |
 | Skill + MCP config hydration | First login | User context | Active Setup (copies to user profile) |
@@ -2526,7 +2526,7 @@ if (Test-Path $templatePath) {
 }
 ```
 
-For MCP servers that require API keys delivered as environment variables, use Intune Settings Catalog to set machine-level variables (e.g., `PERPLEXITY_API_KEY`, `JIRA_API_TOKEN`). The MCP server configuration references these variables, and they're available to any process running on the Cloud PC.
+For MCP servers that require API keys delivered as environment variables, use an Intune remediation script to set user-level variables (e.g., `PERPLEXITY_API_KEY`, `JIRA_API_TOKEN`). The script runs in the user context and calls `[Environment]::SetEnvironmentVariable()` with the `User` scope. The MCP server configuration references these variables, and they're available to any process running under the user's session.
 
 ---
 
@@ -3235,7 +3235,7 @@ az image builder show-runs --name "aib-w365-dev-ai-1-0-0" --resource-group "rg-w
 
 ### Agent Runtime
 
-- Agent cannot access API keys: verify Intune settings catalog or environment variable deployment for the agent account.
+- Agent cannot access API keys: verify Intune script deployment or environment variable configuration for the agent account.
 - CLI commands fail: confirm Node.js and npm are installed system-wide and that global npm paths are in `PATH`.
 - MCP servers not available: confirm global npm installs completed and the config template was hydrated into the user profile.
 
@@ -3774,7 +3774,7 @@ try {
 | **MCP Servers (stdio)** | -- | `npm install -g` | Post-Provisioning / User Context | Intune Win32 available app (per-user); installed from Company Portal on demand |
 | **MCP Server Config** | -- | Template + Active Setup | Image Build + First Login | API key placeholders; real keys via Intune env vars or Azure Key Vault. |
 | **Claude Code Policy** | -- | `managed-settings.json` | Image Build / Local System | Machine-level enterprise governance |
-| **API Keys** | -- | Azure Keyvault / Intune Settings Catalog | Post-Provisioning | **Never bake secrets into the image** |
+| **API Keys** | -- | Azure Key Vault / Intune Script | Post-Provisioning | **Never bake secrets into the image** |
 | **VS Code Extensions** | -- | `code --install-extension` | Post-Provisioning / User Context | Cannot install machine-wide reliably |
 | **Agent Updates** | -- | `npm update -g` | Intune Script on Running Cloud PCs | No reprovisioning needed |
 
