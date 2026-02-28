@@ -1649,8 +1649,6 @@ The `terraform apply` creates all resources and triggers the AIB build in a sing
 
 > **Disk sizing guidance:** Increase `os_disk_size_gb` (for example, to 192 or 256) when adding large toolchains, large package caches, or when Windows Update consistently consumes most of the default 128 GB disk during builds.
 
-![Build Pipeline Phases](./Graphics/Chapter14.png)
-
 ```mermaid
 graph TD
     A[terraform apply] --> B[Create Resource Group]
