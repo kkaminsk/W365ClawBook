@@ -90,6 +90,7 @@ This guide is accurate as of February 25, 2026. Microsoft services, marketplace 
   - [Chapter 33: Monitoring and Forensics](./chapters/ch33-monitoring-and-forensics.md)
   - [Chapter 38: Data Protection with Microsoft Purview](./chapters/ch38-purview-data-protection.md)
   - [Chapter 39: Secrets Management for Agent Deployments](./chapters/ch39-secrets-management.md)
+  - [Chapter 40: Decentralized Identity and Autonomous Payment Architecture](./chapters/ch40-decentralized-identity-payment-architecture.md)
 - [Part VII: Reference](./chapters/ch34-troubleshooting-faq.md)
   - [Chapter 34: Troubleshooting and FAQ](./chapters/ch34-troubleshooting-faq.md)
   - [Chapter 35: PowerShell Scripts](./chapters/ch35-powershell-scripts.md)
