@@ -31,7 +31,15 @@ The MCP configuration template uses placeholder values (e.g., `__PERPLEXITY_API_
 
 > **💡 Tip:** For teams that need centralized key management in the future, consider Intune remediation scripts that read from Azure Key Vault, or a self-service portal where developers can retrieve approved API keys. The manual approach described here is the simplest starting point and avoids storing secrets in Intune configuration profiles.
 
-> **⚠️ Warning:** On Windows 11, user-level environment variables are stored in the registry and are readable by any process running under that user's security context. For high-value secrets, consider using Windows Credential Manager or Azure Key Vault integration.
+> **⚠️ Warning:** On Windows 11, user-level environment variables are stored in the registry and are readable by any process running under that user's security context. For high-value secrets, consider using Windows Credential Manager or Azure Key Vault integration. See **Chapter 39** for a full comparison of Windows secret storage options, the OpenClaw `SecretRef` model, and a production-ready Azure Key Vault integration via OpenClaw's `exec` provider.
+
+After setting keys for OpenClaw, confirm that no plaintext credential remains in `openclaw.json` or related config files:
+
+```powershell
+openclaw secrets audit --check
+```
+
+If the audit reports residue, use `openclaw secrets configure --apply` or manually convert the affected fields to `SecretRef` objects pointing to the relevant environment variable. Chapter 39 covers this migration process step by step.
 
 ### Post-Provisioning Agent Delivery (Intune)
 
