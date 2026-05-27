@@ -42,5 +42,9 @@ As discussed in Chapter 28, disable the WebClient service to neutralize the WebD
 Set-Service -Name WebClient -StartupType Disabled -Status Stopped
 ```
 
+### Data-Layer Controls
+
+The controls in this chapter prevent malicious execution and lateral movement, but they cannot stop sensitive data that leaves through channels a user or agent is legitimately permitted to use — copy-to-USB, browser upload, print, or clipboard. Microsoft Purview Endpoint DLP closes that gap by intercepting those operations at the moment they occur and applying policy based on the content of the file. For how to configure Endpoint DLP, sensitivity labels, and advanced label-based protection for agent workstations, see Chapter 38.
+
 ---
 

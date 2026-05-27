@@ -22,6 +22,8 @@
 | **API Keys** | -- | Azure Keyvault / Intune Settings Catalog | Post-Provisioning | **Never bake secrets into the image** |
 | **VS Code Extensions** | -- | `code --install-extension` | Post-Provisioning / User Context | Cannot install machine-wide reliably |
 | **Agent Updates** | -- | `npm update -g` | Intune Script on Running Cloud PCs | No reprovisioning needed |
+| **Purview Endpoint DLP** | -- | No separate install; rides MDE onboarding | Cloud Policy / MDE sensor on device | Requires Entra join, MDE antimalware 4.18.2110+, real-time protection, and `MpDlpService.exe` firewall allowance |
+| **Purview Information Protection client** | 3.1.309+ (for advanced label protection) | `.exe` or `.msi`; silent deploy via Intune | Post-Provisioning / User Context | Windows only; ARM64 supports viewer and file labeler only; internet required to apply encryption |
 
 ---
 

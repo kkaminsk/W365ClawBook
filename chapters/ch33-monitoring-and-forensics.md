@@ -236,6 +236,18 @@ This provides sub-minute recovery from gateway crashes without depending on Intu
 
 > **💡 Recommendation:** For production deployments, register the OpenClaw gateway as a **Windows service** using [nssm](https://nssm.cc/) (Non-Sucking Service Manager) or `node-windows`. A Windows service provides automatic restart on failure, event log integration, and SCM (Service Control Manager) lifecycle management, all of which the scheduled task watchdog must simulate. The separate [OpenClaw Gateway Watchdog](https://github.com/openclaw/gateway-watchdog) project implements exactly this pattern. The scheduled task approach above is acceptable for initial deployments and evaluation, but the Windows service model should be the target for any team relying on persistent gateway availability.
 
+### Purview Activity Explorer and DLP Forensics
+
+Sysmon and Sentinel detect agent behavior at the process and network layer. Microsoft Purview adds a complementary audit trail at the **data layer** — specifically, which files were accessed, where they were attempted to be sent, and whether DLP policy blocked or allowed the egress.
+
+When an agent identity triggers a DLP block or a block-with-override event, the activity appears in **Purview Activity Explorer** tagged with the user, device, file, activity type, policy matched, and whether an override justification was provided. These events can be exported or streamed to Sentinel for correlation with process-level telemetry.
+
+For incident reconstruction after a suspected agent compromise, **evidence collection** can capture the original matching file from the onboarded device to Azure Blob storage (local device cache of 7, 30, or 60 days while offline). This makes the actual file available for forensic review, not just the metadata about its attempted egress.
+
+When the scope of a compromise is unknown, **Purview eDiscovery** can search content across Exchange, SharePoint, Teams, and OneDrive for files accessed or modified by the agent identity during the compromise window. Combined with the DLP audit trail, this closes the "what data left?" question that process-level telemetry alone cannot answer.
+
+For DLP audit integration into Sentinel, the `MicrosoftPurviewDLP` data connector (where available in your workspace) ingests DLP alert and policy match events into the `PurviewDLPAlert` table. Correlate on `DeviceName` and `ActorUserPrincipalName` to join DLP events with `SecurityEvent` and `SysmonEvent` records.
+
 ---
 
 ## Troubleshooting Guide
