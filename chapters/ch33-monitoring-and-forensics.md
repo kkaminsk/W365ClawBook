@@ -59,6 +59,53 @@ Configure Cloud PCs to forward security events to Azure Log Analytics Workspace 
 - Sysmon/Operational (all IDs above)
 - PowerShell/Operational (Script Block Logging)
 
+### Entra Agent ID Sign-In and Risk Signals
+
+> **Note:** The APIs in this section target the Microsoft Graph **beta** endpoint and require Entra Agent ID to be in use. If your deployment uses secondary Entra ID users (Chapter 27's current recommendation), these queries are not yet applicable. Activate these as monitoring runbook additions when Agent ID reaches GA and your organization migrates agent accounts.
+
+When agent identities are provisioned via Entra Agent ID (Chapter 27), Microsoft exposes two categories of agent-aware signals beyond the standard sign-in logs:
+
+**Agent sign-in events** — Microsoft documents an `agentSignIn` event type and an `agent/agentType` filter on the Graph sign-in logs API. To query all sign-ins from agent identity objects:
+
+```http
+GET https://graph.microsoft.com/beta/auditLogs/signIns
+    ?$filter=signInEventTypes/any(t: t eq 'servicePrincipal')
+    and agent/agentType eq 'AgentIdentity'
+```
+
+The Entra admin center also exposes filters for **Agent ID User**, **Agent Identity**, **Agent Identity Blueprint**, and **Not Agentic** across all four sign-in log types. This is materially richer than filtering by account name — the `agent/agentType` filter is driven by object type, not naming convention, and survives account renames.
+
+**Equivalent Sentinel KQL (when log source includes agentType field):**
+
+```kql
+SigninLogs
+| where AgentType == "AgentIdentity"
+| project TimeGenerated, UserPrincipalName, AppDisplayName, IPAddress, ResultType, ConditionalAccessStatus
+| order by TimeGenerated desc
+```
+
+**Risky agent signals** — Microsoft Identity Protection exposes agent-specific risk surfaces in beta:
+
+```http
+GET https://graph.microsoft.com/beta/identityProtection/riskyAgents
+GET https://graph.microsoft.com/beta/identityProtection/agentRiskDetections
+```
+
+`riskyAgents` returns agent identity objects that have elevated risk scores, analogous to `riskyUsers` for human accounts. `agentRiskDetections` returns the individual detection events that drove those scores. These endpoints enable agent-specific risk-based Conditional Access and incident response workflows that are not possible with secondary Entra ID user accounts.
+
+**Sentinel alert for elevated agent risk:**
+
+```kql
+// Requires AADRiskyUsers or equivalent table populated from Identity Protection connector
+// Replace with the appropriate table name once agent risk data is ingested
+AADRiskyUsers
+| where UserType == "AgentIdentity" and RiskLevel in ("high", "medium")
+| project TimeGenerated, UserPrincipalName, RiskLevel, RiskDetail, RiskLastUpdatedDateTime
+| order by RiskLevel desc
+```
+
+For production use, confirm the exact table name with your Sentinel connector configuration once the Agent ID Identity Protection data connector is available in your workspace.
+
 ### OpenClaw Gateway Health Monitoring
 
 The OpenClaw gateway runs as a background Node.js process. Unlike a Windows service managed by SCM, it has no built-in restart-on-failure, no health endpoint monitored by the OS, and no event log integration. If the gateway crashes (due to an unhandled exception, memory exhaustion, or a bad MCP server interaction), it stays down until someone notices.
