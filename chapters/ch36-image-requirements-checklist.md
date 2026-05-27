@@ -9,8 +9,8 @@
 - [ ] Single-session (no multi-session)
 - [ ] No recovery partitions
 - [ ] No data disks
-- [ ] No FSLogix components
-- [ ] Under 3,000 Start menu apps
+- [ ] No pre-installed FSLogix components (deploy via Intune policy post-provisioning; pre-baking into the image can conflict with Intune-managed FSLogix configuration)
+- [ ] Under 3,000 Start menu apps (soft guideline; validate during testing)
 - [ ] Not using disk encryption sets
 - [ ] Default 64 GB OS disk size (Windows 365 adjusts to the licence SKU)
 

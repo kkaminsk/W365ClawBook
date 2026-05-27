@@ -29,16 +29,13 @@ Priority  Direction  Action  Destination                          Port    Protoc
 240       Outbound   Allow   login.microsoftonline.com            443     TCP       Entra ID authentication
 250       Outbound   Allow   *.windowsupdate.com                  443,80  TCP       Windows Update
 
-# Internet Access for Agent Operations
-900       Outbound   Allow   Internet                             443     TCP       General HTTPS (agent flexibility)
-
 # Default Deny
 4096      Outbound   Deny    *                                    *       *         Block all other traffic
 ```
 
-> **💡 Important:** Windows 365 Cloud PCs require connectivity to specific Microsoft endpoints for RDP gateway, Intune management, Windows Update, Defender, and Entra ID authentication. The full list of required endpoints is published at [learn.microsoft.com/windows-365/enterprise/requirements-network](https://learn.microsoft.com/windows-365/enterprise/requirements-network). Review this list before deploying your NSG -- missing a required endpoint will cause provisioning failures or management gaps. The rules above cover the most critical service tags; consult the published list for the complete set.
->
-> Note: The priority 900 rule allows general HTTPS outbound to the internet, which is necessary for AI agents that need to access arbitrary web resources (documentation, APIs, package registries). If your security posture requires stricter control, replace this with explicit allowlists for each endpoint the agent needs, but be prepared for operational overhead as agents discover new endpoints.
+> **💡 Important:** Windows 365 Cloud PCs require connectivity to specific Microsoft endpoints for RDP gateway, Intune management, Windows Update, Defender, and Entra ID authentication. The full list of required endpoints is published at [learn.microsoft.com/windows-365/enterprise/requirements-network](https://learn.microsoft.com/windows-365/enterprise/requirements-network). Review this list before deploying your NSG — missing a required endpoint will cause provisioning failures or management gaps. The rules above cover the most critical service tags; consult the published list for the complete set.
+
+> **⚠️ No blanket internet rule:** A previous version of this configuration included a priority-900 rule allowing all outbound HTTPS to `Internet`. That rule has been removed. It defeated the purpose of the NSG by allowing any agent process to reach any HTTPS destination, which eliminates the egress control layer entirely. If your agents require endpoints not listed above (for example, PyPI, crates.io, additional documentation sites, or third-party APIs), add explicit rules at priorities 131–199 for each one. Yes, this creates maintenance overhead as agents discover new endpoints — that overhead is the cost of defence-in-depth. The opening note of this chapter describes how to evaluate whether egress filtering is right for your threat model.
 
 ### Block Lateral Movement
 

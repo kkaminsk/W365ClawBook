@@ -7,7 +7,7 @@ A critical concept underpins this entire design: **the image build handles binar
 Azure Image Builder runs scripts as **NT AUTHORITY\SYSTEM** (Local System). This account has full machine access but:
 
 - No user profile (`%USERPROFILE%` resolves to `C:\Windows\System32\config\systemprofile`)
-- No HKCU registry hive (in the expected sense)
+- HKCU resolves to the SYSTEM account's profile hive, not a logged-in user's profile — software writing to HKCU during image build writes to a location developers never see at login
 - No browser session
 - No interactive desktop (Session 0)
 

@@ -36,7 +36,7 @@ graph TD
     D --> E[Create AIB Template]
     E --> F[Trigger Build via azapi_resource_action]
     F --> G[AIB Provisions Build VM<br/>Standard_D4s_v5]
-    G --> H[Phase 1: Core Runtimes<br/>~20 min]
+    G --> H[Phase 1: Core Runtimes<br/>~15 min]
     H --> I[Restart]
     I --> J[Phase 2: Developer Tools<br/>~10 min]
     J --> L[Phase 3: Configuration<br/>~5 min]

@@ -6,10 +6,10 @@
 | **Python** | 3.14.3 | EXE (`InstallAllUsers=1`) | Image Build / Local System | `PrependPath=1` for global access |
 | **PowerShell 7** | 7.4.13 | MSI | Image Build / Local System | Pin URL to specific release (not `/latest/`) |
 | **VS Code** | Latest | System Installer (EXE) | Image Build / Local System | `/MERGETASKS=!runcode` to prevent hang |
-| **Git** | 2.53.0 | Inno Setup (EXE) | Image Build / Local System | `/PathOption=Cmd` for PATH registration |
+| **Git** | 2.53.0 *(verify against pinned value in terraform.tfvars)* | Inno Setup (EXE) | Image Build / Local System | `/PathOption=Cmd` for PATH registration |
 | **GitHub Desktop** | Latest | Machine-Wide MSI | Image Build / Local System | Hydrates into user profile at first login |
 | **Azure CLI** | 2.83.0 | MSI (`ALLUSERS=1`) | Image Build / Local System | Used for Terraform authentication |
-| **GitHub Copilot** | Latest | VS Code extension | Image Build / Local System | Installed via `code.cmd --install-extension` |
+| **GitHub Copilot** | Latest | VS Code extension | Post-Provisioning / User Context | Cannot install machine-wide reliably; deploy via Intune user-context script |
 | **OpenClaw** | 2026.2.14 | `npm install -g` | Post-Provisioning / User Context | Intune Win32 required app; never run `openclaw onboard` during build |
 | **Claude Code** | 2.1.42 | `npm install -g` | Post-Provisioning / User Context | Intune Win32 required app; never run `claude login` during build |
 | **OpenSpec** | 0.9.1 | `npm install -g` | Post-Provisioning / User Context | Intune Win32 required app (per-user) |

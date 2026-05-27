@@ -40,7 +40,7 @@ For automated skill updates via Intune scripts, the PAT can be passed inline (th
 git clone "https://<PAT>@github.com/org/approved-agent-skills.git" $tempDir
 ```
 
-For Azure DevOps, GCM supports Azure AD-backed authentication natively, so no PAT is required if the developer (or agent identity) has appropriate project access.
+For Azure DevOps, GCM supports Azure AD-backed authentication via interactive browser flows. For unattended agent use — such as Intune scripts — a PAT with the minimum required scope (typically `Code: Read`) is still required; GCM's interactive flow is not available in a headless context.
 
 > **⚠️ Warning:** Never bake PATs into the image. They are user-specific, time-limited credentials that must be managed per-developer.
 

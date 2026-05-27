@@ -2,7 +2,7 @@
 
 ## Appendix: Feedback and Errata
 
-If you find an error, version mismatch, or broken link, file an issue in the W365Claw repository with:
+If you find an error, version mismatch, or broken link, file an issue at **https://github.com/kkaminsk/W365ClawBook/issues** with:
 
 - The exact section or heading name
 - Your environment details (region, SKU, image version)
@@ -72,7 +72,7 @@ Remove-AzGalleryImageVersion `
 
 ---
 
-*Azure Compute Gallery integration with Windows 365 was in public preview at the time of writing. Verify the current status at [learn.microsoft.com/windows-365](https://learn.microsoft.com/windows-365/); feature behaviour may change between preview and general availability. Test thoroughly in non-production environments before adopting for production workloads.*
+*Azure Compute Gallery integration with Windows 365 is generally available. Test in non-production environments before adopting for production workloads.*
 
 *(c) 2026 Kevin Kaminski. This work is licensed under a [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/).*
 

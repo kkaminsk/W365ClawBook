@@ -6,7 +6,7 @@ Deploy hardening configurations via Intune Custom OMA-URI profiles:
 
 | Setting | OMA-URI | Value |
 |---------|---------|-------|
-| Disable WebClient | PowerShell script | `Set-Service -Name WebClient -StartupType Disabled` |
+| Disable WebClient | PowerShell script | `Set-Service -Name WebClient -StartupType Disabled; Stop-Service -Name WebClient -Force -ErrorAction SilentlyContinue` |
 | Windows Sandbox (no audio) | `./Device/Vendor/MSFT/Policy/Config/WindowsSandbox/AllowAudioInput` | `0` |
 | Windows Sandbox (no network) | `./Device/Vendor/MSFT/Policy/Config/WindowsSandbox/AllowNetworking` | `0` |
 

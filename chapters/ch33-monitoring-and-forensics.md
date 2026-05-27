@@ -23,6 +23,8 @@ SecurityEvent
 | project TimeGenerated, Computer, Account, ParentProcessName, NewProcessName, CommandLine
 ```
 
+> **Note:** `ParentProcessName` is the correct field name for the `SecurityEvent` table (populated by Windows Security Audit Event 4688 via MMA/AMA). If you are using Microsoft Defender for Endpoint advanced hunting (`DeviceProcessEvents` table), the equivalent field is `InitiatingProcessFileName`.
+
 **Agent Accessing Credentials:**
 ```kql
 SecurityEvent
@@ -135,7 +137,7 @@ Write-Output "Remediation failed"
 exit 1
 ```
 
-Deploy this as an Intune remediation with a schedule of every 1--4 hours depending on how critical gateway uptime is for your team.
+Deploy this as an Intune remediation script targeting the Cloud PC device group. **Important:** Intune runs remediation scripts at a fixed interval controlled by the service (typically daily or at device check-in) — custom per-hour scheduling is not available for Intune remediations. For recovery times shorter than a day, use the Scheduled Task watchdog approach below instead of relying solely on Intune.
 
 **Alerting: Sentinel Query**
 
@@ -173,8 +175,9 @@ Set-Content -Path $watchdogPath -Value $watchdogScript -Encoding UTF8
 # Register scheduled task to run every 15 minutes
 $action = New-ScheduledTaskAction -Execute "powershell.exe" `
     -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File `"$watchdogPath`""
-$trigger = New-ScheduledTaskTrigger -RepetitionInterval (New-TimeSpan -Minutes 15) `
-    -Once -At (Get-Date)
+$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) `
+    -RepetitionInterval (New-TimeSpan -Minutes 15) `
+    -RepetitionDuration ([TimeSpan]::MaxValue)
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
     -StartWhenAvailable -RunOnlyIfNetworkAvailable
 Register-ScheduledTask -TaskName "OpenClaw Gateway Watchdog" `
