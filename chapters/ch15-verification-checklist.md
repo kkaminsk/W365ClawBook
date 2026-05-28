@@ -1,5 +1,7 @@
 ## Chapter 15: Verification Checklist
 
+Use this checklist after every ACG (Azure Compute Gallery) build, before importing the image into Intune. The checklist is organized into three tiers: Tier 1 covers build-time verification, Tiers 2 and 3 cover post-provisioning checks.
+
 After the image build completes and before importing into Windows 365, verify every component:
 
 ### Image Version in ACG
@@ -30,11 +32,13 @@ After post-provisioning agent delivery (via Intune), additionally verify:
 - [ ] `claude --version` returns expected version
 - [ ] `codex --version` returns expected version
 
+If any software verification check fails, access the AIB (Azure VM Image Builder) build log from the staging resource group before running the teardown procedure in Chapter 19.
+
 ### Configuration Verification
 
-- [ ] `C:\ProgramData\ClaudeCode\managed-settings.json` exists with correct policy
+- [ ] `C:\ProgramData\ClaudeCode\managed-settings.json` exists with correct policy (schema details in Chapter 28)
 - [ ] `C:\ProgramData\OpenClaw\template-config.json` exists with correct model
-- [ ] Active Setup registry key exists for OpenClaw config hydration
+- [ ] Active Setup registry key exists for profile initialization via Active Setup (see Chapter 10 for the mechanism)
 - [ ] Teams `IsWVDEnvironment` registry key is set to 1
 - [ ] SBOM files exist in `C:\ProgramData\ImageBuild\`
 
@@ -42,7 +46,7 @@ After post-provisioning agent delivery (via Intune), additionally verify:
 
 - [ ] No recovery partition present
 - [ ] Image is generalized (Sysprep completed successfully)
-- [ ] Image was never Entra/AD joined or Intune enrolled
+- [ ] Image was never Entra/AD joined or Intune enrolled (failure: Windows 365 custom image import validation rejects previously Entra-joined or Intune-enrolled images — this is one of the most common import rejection causes)
 - [ ] `end_of_life_date` is set to 90 days from build date
 
 ---

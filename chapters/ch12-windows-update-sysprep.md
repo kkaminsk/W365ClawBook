@@ -1,8 +1,12 @@
 ## Chapter 12: Windows Update and Sysprep
 
+> **Note:** The chapter numbering follows the companion W365Claw repository's module organization; Chapter 10 covers Phase 3 configuration, and this chapter covers the Windows Update and Sysprep phase of the same build pipeline.
+
 ### Why Windows Update in the Image
 
 The AIB template includes a Windows Update customizer to apply cumulative updates during the build:
+
+This customizer belongs in the AIB (Azure VM Image Builder) template's `customizers` array within the `azurerm_image_builder_template` Terraform resource.
 
 ```json
 {
@@ -18,7 +22,7 @@ The AIB template includes a Windows Update customizer to apply cumulative update
 
 Without this, newly provisioned Cloud PCs start with a stale image and depend on Windows Update post-provisioning, increasing first-sign-in time by 30--60 minutes and leaving a security window during which the machine is vulnerable to patched exploits.
 
-The `exclude:Preview` filter prevents preview/beta updates from being installed, which could introduce instability.
+The `exclude:Preview` filter prevents preview/beta updates from being installed, which could introduce instability. AIB filter expression strings are evaluated by the AIB service, not by PowerShell directly — syntax that is valid in PowerShell may not be valid in an AIB filter context.
 
 ### Windows Update Retry Guidance
 

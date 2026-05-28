@@ -4,7 +4,7 @@
 
 The image build process downloads software installers and npm packages from the public internet. Without integrity verification, a compromised upstream release (supply chain attack) would be silently baked into every provisioned Windows 365 developer image.
 
-This is not a theoretical risk. Based on community-reported incidents, the "ClawHavoc" campaign indicated that approximately 12% of skills in the OpenClaw ecosystem's ClawHub registry were malicious (see Chapter 29). While independent verification of the exact figure varies by source, the pattern is consistent with broader supply chain attacks on npm packages and binary installers, which are well-documented and increasing in frequency.
+This is not a theoretical risk. Community advisories have flagged multiple malicious skills in the ClawHub marketplace — a pattern consistent with supply-chain attacks documented against npm and PyPI, and the primary motivation for the controls in this chapter.
 
 ### SHA256 Checksum Verification
 
@@ -47,7 +47,7 @@ When bumping a software version, obtain the SHA256 from the official release:
 | Node.js | `https://nodejs.org/dist/v24.13.1/SHASUMS256.txt` |
 | Python | Release page -> Files -> SHA256 column |
 | PowerShell 7 | GitHub release -> `hashes.sha256` asset |
-| Git | GitHub release notes or compute from download |
+| Git | GitHub release notes or compute from download (Computing checksums from your own download is a last resort; pre-computed hashes for Git for Windows are published on the project's GitHub Releases page.) |
 | Azure CLI | Microsoft docs for MSI releases |
 
 Example `terraform.tfvars`:
@@ -80,6 +80,8 @@ npm packages use a different integrity mechanism:
 3. **Build audit**: `npm list -g --depth=0` output logged for every build
 
 npm's built-in integrity checking (via `package-lock.json` SHA512 hashes) does not apply to global installs. The version pin + SBOM is the primary control.
+
+Add `npm audit --audit-level=high` to your build validation script and cross-reference installed global packages against your SBOM (Software Bill of Materials) after installation.
 
 ### Pinned Versions
 

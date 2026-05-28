@@ -4,7 +4,7 @@
 
 ## Chapter 26: The Agent Threat Model
 
-### The Autonomous Insider
+### The Agent as Insider Vector
 
 The integration of agentic AI into enterprise development environments represents a fundamental architectural shift. Tools like Claude Code and OpenClaw possess **agency**, the capability to formulate multi-step plans, execute shell commands, manipulate file systems, interact with network endpoints, and manage persistent memory without continuous human intervention.
 
@@ -18,12 +18,14 @@ When deployed on Windows 365 Cloud PCs, these agents operate behind the corporat
 | **Execution Model** | CLI invoked per task | Background service/gateway |
 | **Permission Model** | Permission-gated (ask/allow/deny) | Full user context by default |
 | **Extension Ecosystem** | MCP servers (curated) | Skills/ClawHub (uncurated) |
-| **Supply Chain Risk** | Low (Anthropic-published npm package) | **High** (ClawHavoc, 12% malicious skills) |
+| **Supply Chain Risk** | Low (Anthropic-published npm package) | **High** (ClawHavoc, 12% malicious skills) (see Chapter 13 for supply-chain controls and Chapter 29 for skill vetting procedures) |
 | **Memory Persistence** | Session-scoped | Long-term (SOUL.md, MEMORY.md) |
 | **Network Exposure** | Outbound API calls only | WebSocket server, REST API |
 | **Primary Threat** | Prompt injection -> shell execution | Supply chain -> malware delivery |
 
 ![Agent Threat Model](../Graphics/Chapter26.png)
+
+> The following chapters address each threat category: identity controls (Chapter 27), Claude Code hardening (Chapter 28), OpenClaw Gateway hardening (Chapter 29), network segmentation (Chapter 30), endpoint protection (Chapter 31), and Intune policy enforcement (Chapter 32). Blockchain-layer threats — including wallet compromise and unauthorized stablecoin spend — are addressed in Chapter 40.
 
 **Claude Code** represents the "governed" approach. It operates in a reactive mode, analyzing codebases and suggesting changes that require user confirmation. Its reliance on the host OS shell introduces specific Windows vulnerabilities (WebDAV bypass, environment variable exposure), but its permission system provides meaningful defense-in-depth.
 

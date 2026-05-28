@@ -6,9 +6,12 @@ The general rule is: **put the minimum into the image, let the developer customi
 
 | In the Image | Post-Provisioning | Developer Choice |
 |---|---|---|
-| GitHub Copilot (core to the workflow) | Language-specific extensions (Python, C#) | Theme, font, keybinding extensions |
-| | Claude Code VS Code extension | Productivity tools (GitLens, TODO Tree) |
-| | Linting / formatting extensions | Personal preference extensions |
+| GitHub Copilot (binary pre-positioned; post-provisioning script handles activation and user-specific configuration — see note below) | GitHub Copilot (activation and user-specific configuration) | Theme, font, keybinding extensions |
+| No | Language-specific extensions (Python, C#) | Productivity tools (GitLens, TODO Tree) |
+| No | Claude Code VS Code extension | Personal preference extensions |
+| No | Linting / formatting extensions | No |
+
+> **Note:** The image pre-positions the GitHub Copilot extension binary during the build step. The post-provisioning script handles activation and user-specific configuration. This is not a contradiction — baking the binary speeds up first-login readiness while still requiring user-context setup before Copilot is functional.
 
 Extensions baked into the image are frozen at build time and update only via reprovisioning. Extensions installed post-provisioning update automatically via VS Code's built-in mechanism. Keep the image lean; developers are best positioned to choose their own tooling beyond the baseline.
 
@@ -22,13 +25,13 @@ Deploy extensions via an Intune user-context PowerShell script:
 
 ```powershell
 # Runs in the user's context after provisioning
-code --install-extension anthropic.claude-code --force
-code --install-extension ms-python.python --force
-code --install-extension github.copilot --force
-code --install-extension github.copilot-chat --force
+code.cmd --install-extension anthropic.claude-code --force
+code.cmd --install-extension ms-python.python --force
+code.cmd --install-extension github.copilot --force
+code.cmd --install-extension github.copilot-chat --force
 ```
 
-This ensures extensions are installed into the correct user profile and can be updated independently via VS Code's built-in extension update mechanism.
+This ensures extensions are installed into the correct user profile and can be updated independently via VS Code's built-in extension update mechanism. This script must run after VS Code is installed on the Cloud PC. For the Intune deployment pattern used to execute this script post-provisioning, see Chapter 25.
 
 ---
 

@@ -14,7 +14,7 @@ $NodeMsiUrl = "https://nodejs.org/dist/$NodeVersion/node-$NodeVersion-x64.msi"
 $NodeInstaller = "$env:TEMP\node-$NodeVersion-x64.msi"
 
 Write-Host "=== Installing Node.js $NodeVersion ==="
-Get-InstallerWithRetry -Uri $NodeMsiUrl -OutFile $NodeInstaller
+Get-InstallerWithRetry -Uri $NodeMsiUrl -OutFile $NodeInstaller  # defined below in "Download Retry Logic"
 
 $proc = Start-Process -FilePath "msiexec.exe" `
     -ArgumentList "/i `"$NodeInstaller`" /qn /norestart ALLUSERS=1 ADDLOCAL=ALL" `
@@ -108,11 +108,19 @@ if ($proc.ExitCode -ne 0) {
 }
 ```
 
+Key MSI properties:
+
+| MSI Property | Value | Reason |
+|---|---|---|
+| `ENABLE_PSREMOTING` | `0` | Disables WinRM-based remoting; not needed in image build context |
+| `USE_MU` / `ENABLE_MU` | `0` | Disables Microsoft Update integration; updates are managed via image rebuild |
+| `ADD_PATH` | `1` | Adds PowerShell 7 to system PATH |
+
 > **💡 Tip:** The PowerShell 7 download URL must use a specific release path (`/download/v7.4.13/`), not the `/latest/` redirect. Using `/latest/` with a versioned filename will 404 when a newer release ships. This was identified as a High severity finding in the Terraform audit.
 
 ### The Restart
 
-After Phase 1, the AIB template includes a `WindowsRestart` customizer to ensure all PATH changes and system state updates are fully propagated:
+After Phase 1, the AIB template (AIB template — the Azure VM Image Builder Terraform resource) includes a `WindowsRestart` customizer to ensure all PATH changes and system state updates are fully propagated:
 
 ```json
 {

@@ -184,8 +184,63 @@ function Invoke-PreFlightChecks {
         $results["Terraform"] = @{ Status = $true; Detail = "$tfVer" }
     }
 
-    # ... (Azure CLI, Git, Az Module, Azure Login, Resource Providers, terraform init)
-    # Full implementation checks all prerequisites and prints a summary table
+    # Azure CLI check
+    $azVer = Get-AzureCLIVersion
+    if ($null -eq $azVer) {
+        $results["AzureCLI"] = @{ Status = $false; Detail = "MISSING"; NeedsInstall = $true }
+    } elseif ($azVer -lt $MinVersions.AzureCLI) {
+        $results["AzureCLI"] = @{ Status = $false; Detail = "$azVer (need >= $($MinVersions.AzureCLI))"; NeedsInstall = $true }
+    } else {
+        $results["AzureCLI"] = @{ Status = $true; Detail = "$azVer" }
+    }
+
+    # Git check
+    $gitVer = Get-GitVersion
+    if ($null -eq $gitVer) {
+        $results["Git"] = @{ Status = $false; Detail = "MISSING"; NeedsInstall = $true }
+    } elseif ($gitVer -lt $MinVersions.Git) {
+        $results["Git"] = @{ Status = $false; Detail = "$gitVer (need >= $($MinVersions.Git))"; NeedsInstall = $true }
+    } else {
+        $results["Git"] = @{ Status = $true; Detail = "$gitVer" }
+    }
+
+    # Az PowerShell module check
+    $azModVer = Get-AzModuleVersion
+    if ($null -eq $azModVer) {
+        $results["AzModule"] = @{ Status = $false; Detail = "MISSING"; NeedsInstall = $true }
+    } elseif ($azModVer -lt $MinVersions.AzModule) {
+        $results["AzModule"] = @{ Status = $false; Detail = "$azModVer (need >= $($MinVersions.AzModule))"; NeedsInstall = $true }
+    } else {
+        $results["AzModule"] = @{ Status = $true; Detail = "$azModVer" }
+    }
+
+    # Azure login check
+    $loginState = Test-AzureLogin
+    if ($loginState.LoggedIn) {
+        $results["AzureLogin"] = @{ Status = $true; Detail = "Subscription: $($loginState.Subscription)" }
+    } else {
+        $results["AzureLogin"] = @{ Status = $false; Detail = "NOT LOGGED IN"; NeedsLogin = $true }
+    }
+
+    # Resource provider registration check — each provider must show 'Registered'
+    foreach ($provider in $RequiredProviders) {
+        $state = Get-ProviderStatus $provider
+        $key = "Provider:$provider"
+        if ($state -eq "Registered") {
+            $results[$key] = @{ Status = $true; Detail = $state }
+        } else {
+            $results[$key] = @{ Status = $false; Detail = "$state (need Registered)"; NeedsProviderReg = $true; Provider = $provider }
+        }
+    }
+
+    # Terraform init check — verifies that 'terraform init' has been run in the target directory
+    if (Test-TerraformInitialized) {
+        $results["TerraformInit"] = @{ Status = $true; Detail = "Initialized ($TerraformDir)" }
+    } else {
+        $results["TerraformInit"] = @{ Status = $false; Detail = "NOT INITIALIZED — run terraform init"; NeedsInit = $true }
+    }
+
+    # Print a summary table of all prerequisite states
 
     foreach ($key in $results.Keys) {
         $r = $results[$key]
@@ -217,8 +272,71 @@ function Install-MissingPrerequisites {
         }
     }
 
-    # ... (Azure CLI, Git, Az Module, Azure Login, Resource Provider registration, terraform init)
-    # Each missing prerequisite is installed with confirmation (or automatically with -Force)
+    # Azure CLI installation — must precede Az Module and Azure Login steps
+    if ($Results["AzureCLI"].NeedsInstall) {
+        if (Confirm-Action "Install Azure CLI via winget?") {
+            if ($hasWinget) {
+                winget install Microsoft.AzureCLI --silent --accept-package-agreements --accept-source-agreements
+            }
+            Update-SessionPath
+        }
+    }
+
+    # Git installation — must precede any git-dependent Terraform operations
+    if ($Results["Git"].NeedsInstall) {
+        if (Confirm-Action "Install Git via winget?") {
+            if ($hasWinget) {
+                winget install Git.Git --silent --accept-package-agreements --accept-source-agreements
+            }
+            Update-SessionPath
+        }
+    }
+
+    # Az PowerShell module installation
+    if ($Results["AzModule"].NeedsInstall) {
+        if (Confirm-Action "Install Az PowerShell module?") {
+            Install-Module Az -Repository PSGallery -Force -AllowClobber -Scope AllUsers
+        }
+    }
+
+    # Azure interactive login — skipped in -Force mode; must follow Azure CLI installation
+    if ($Results["AzureLogin"].NeedsLogin -and -not $Force) {
+        Write-Host "Azure CLI login required. Launching browser..." -ForegroundColor Yellow
+        az login
+    }
+
+    # Resource provider registration — registers any unregistered providers and polls until Registered
+    # Ordering: registration calls are idempotent; polling ensures the provider is usable before terraform init
+    foreach ($key in $Results.Keys) {
+        if ($Results[$key].NeedsProviderReg) {
+            $provider = $Results[$key].Provider
+            if (Confirm-Action "Register provider $provider?") {
+                Write-Host "  Registering $provider..." -ForegroundColor Yellow
+                az provider register --namespace $provider | Out-Null
+                $elapsed = 0
+                while ((Get-ProviderStatus $provider) -ne "Registered" -and $elapsed -lt $ProviderRegistrationTimeoutSeconds) {
+                    Start-Sleep -Seconds $ProviderRegistrationPollSeconds
+                    $elapsed += $ProviderRegistrationPollSeconds
+                    Write-Host "    ... waiting ($elapsed s / $ProviderRegistrationTimeoutSeconds s)" -ForegroundColor DarkGray
+                }
+                if ((Get-ProviderStatus $provider) -ne "Registered") {
+                    Write-Warning "Provider $provider did not reach Registered state within timeout."
+                }
+            }
+        }
+    }
+
+    # Terraform init — runs only after all prerequisites are satisfied; must run inside TerraformDir
+    if ($Results["TerraformInit"].NeedsInit) {
+        if (Confirm-Action "Run 'terraform init' in $TerraformDir?") {
+            Push-Location $TerraformDir
+            try {
+                terraform init
+            } finally {
+                Pop-Location
+            }
+        }
+    }
 }
 
 # --- Main Execution -------------------------------------------------------
@@ -283,6 +401,70 @@ param(
     [switch]$Force,
     [string]$TerraformDir = (Join-Path $PSScriptRoot "..\terraform")
 )
+```
+
+#### Representative Excerpt — Subscription Detection and tfvars Write
+
+The following excerpts illustrate two of the six phases. The first shows how the script detects the active Azure subscription and presents it for confirmation or override. The second shows the tfvars file writer, which handles string, boolean, integer, and map values in valid HCL format.
+
+```powershell
+# Phase 2 excerpt: Detect Azure subscription and prompt for confirmation or override
+function Get-SubscriptionId {
+    param([hashtable]$Existing, [switch]$Force)
+
+    $detected = $null
+    if (Test-CommandExists "az") {
+        try {
+            $account = az account show 2>&1 | ConvertFrom-Json
+            $detected = $account.id
+            Write-Host "  Detected subscription: $($account.name) ($detected)" -ForegroundColor DarkGray
+        } catch {}
+    }
+
+    $default = if ($Existing["subscription_id"]) { $Existing["subscription_id"] }
+               elseif ($detected) { $detected }
+               else { "" }
+
+    if ($Force) { return $default }
+
+    do {
+        $input = Read-Host "subscription_id [$default]"
+        $value = if ($input -eq "") { $default } else { $input.Trim() }
+        if ($value -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
+            return $value
+        }
+        Write-Host "  Invalid GUID format. Enter a valid Azure subscription ID." -ForegroundColor Red
+    } while ($true)
+}
+
+# Phase 6 excerpt: Write all collected values to terraform.tfvars in valid HCL format
+function Write-TfVars {
+    param([hashtable]$Values, [string]$OutputPath)
+
+    $lines = @()
+    foreach ($key in $Values.Keys | Where-Object { $_ -ne "tags" }) {
+        $val = $Values[$key]
+        $lines += switch ($val.GetType().Name) {
+            "Boolean" { "$key = $(if ($val) { 'true' } else { 'false' })" }
+            "Int32"   { "$key = $val" }
+            "Int64"   { "$key = $val" }
+            default   { "$key = `"$val`"" }
+        }
+    }
+
+    # Tags map block — emitted last for readability
+    if ($Values["tags"] -and $Values["tags"].Count -gt 0) {
+        $lines += ""
+        $lines += "tags = {"
+        foreach ($tagKey in $Values["tags"].Keys) {
+            $lines += "  $tagKey = `"$($Values['tags'][$tagKey])`""
+        }
+        $lines += "}"
+    }
+
+    $lines | Set-Content -Path $OutputPath -Encoding UTF8
+    Write-Host "  Wrote $($lines.Count) lines to $OutputPath" -ForegroundColor Green
+}
 ```
 
 #### What It Does
@@ -377,6 +559,8 @@ The `-Force` flag skips all prompts and writes immediately, which is useful for 
 > **💡 Tip:** The full script (~750 lines) is available in the W365Claw repository at `scripts/Initialize-TerraformVars.ps1`. Run it once before your first `terraform plan` to populate all version pins and checksums automatically.
 
 ### Teardown-BuildResources.ps1
+
+This script is the targeted teardown equivalent of `terraform destroy`, designed to release the AIB (Azure VM Image Builder) build VM and staging costs while preserving the ACG (Azure Compute Gallery) image gallery and managed identity. Run it after successful build verification (Chapter 15) to avoid carrying compute costs between builds. Do not run it if the build failed — the staging resource group contains diagnostic evidence.
 
 ```powershell
 <#

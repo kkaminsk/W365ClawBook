@@ -15,22 +15,22 @@ Any tool that expects a user context (WinGet's App Installer dependency, VS Code
 
 ### The Responsibility Matrix
 
-| Responsibility | Timing | Execution Context | Mechanism |
-|---|---|---|---|
-| Runtimes (Node.js, Python, PowerShell 7) | Image build | Local System | MSI/EXE silent installers |
-| Developer tools (VS Code, Git, Azure CLI) | Image build | Local System | System installers with automation flags |
-| AI agent binaries (OpenClaw, Claude Code, Codex) | Post-provisioning | User context | Intune Win32 app (required, per-user) |
-| OpenSpec | Post-provisioning | User context | Intune Win32 app (required, per-user) |
-| Enterprise policy (managed-settings.json) | Image build | Local System | File write to ProgramData |
-| Configuration templates | Image build | Local System | File write to ProgramData |
-| Agent skills (curated) | Image build | Local System | File copy to ProgramData |
-| MCP server binaries | Post-provisioning | User context | Intune Win32 app (available, per-user) |
-| MCP server configuration | Image build | Local System | Template in ProgramData |
-| API keys and credentials | Post-provisioning | Machine (Intune) | Environment variables via Settings Catalog |
-| VS Code extensions | Post-provisioning | User context | Intune script |
-| OpenClaw config hydration | First login | User context | Active Setup registry entry |
-| Skill + MCP config hydration | First login | User context | Active Setup (copies to user profile) |
-| GitHub Desktop application | First login | User context | Machine-wide MSI provisioner |
+| Responsibility | Timing | Execution Context | Mechanism | Destination Path |
+|---|---|---|---|---|
+| Runtimes (Node.js, Python, PowerShell 7) | Image build | Local System | MSI/EXE silent installers | |
+| Developer tools (VS Code, Git, Azure CLI) | Image build | Local System | System installers with automation flags | |
+| AI agent binaries (OpenClaw, Claude Code, Codex) | Post-provisioning | User context | Intune Win32 app (required, per-user) | |
+| OpenSpec (OpenSpec — a declarative agent configuration format; introduced in Chapter 9) | Post-provisioning | User context | Intune Win32 app (required, per-user) | |
+| Enterprise policy (managed-settings.json) | Image build | Local System | File write to ProgramData | `C:\ProgramData\OpenClaw\config\managed-settings.json` |
+| Configuration templates | Image build | Local System | File write to ProgramData | `C:\ProgramData\OpenClaw\config\` |
+| Agent skills (curated) | Image build | Local System | File copy to ProgramData | `C:\ProgramData\OpenClaw\skills\` |
+| MCP server binaries | Post-provisioning | User context | Intune Win32 app (available, per-user) | |
+| MCP server configuration | Image build | Local System | Template in ProgramData | `C:\ProgramData\OpenClaw\mcp\` |
+| API keys and credentials | Post-provisioning | Machine (Intune) | Environment variables via Settings Catalog | |
+| VS Code extensions | Post-provisioning | User context | Intune script | |
+| OpenClaw config hydration | First login | User context | Active Setup registry entry | |
+| Skill + MCP config hydration | First login | User context | Active Setup (copies to user profile) | |
+| GitHub Desktop application | First login | User context | Machine-wide MSI provisioner | |
 
 ![Image Build vs Post-Provisioning Split](../Graphics/Chapter3.png)
 
@@ -39,7 +39,7 @@ Any tool that expects a user context (WinGet's App Installer dependency, VS Code
 The objective is to produce a Windows 11 image where the AI agents are not merely present, but **dormant and ready**:
 
 - **Binaries are machine-wide.** Executables are in `C:\Program Files` or a globally accessible PATH location, not buried in a specific user's AppData.
-- **Dependencies are pre-resolved.** Complex dependency chains are fully installed and verified, eliminating the need for the developer to have admin rights.
+- **Failure modes are pre-empted.** Complex dependency chains are fully installed and verified, eliminating the need for the developer to have admin rights.
 - **Configuration is injected.** Base configuration files are pre-seeded in a system location, enforcing enterprise security policies before the user ever launches the agent.
 
 Install the binaries. Inject configuration templates. Defer initialization to first login.

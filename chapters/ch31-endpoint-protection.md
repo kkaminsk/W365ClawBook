@@ -2,6 +2,8 @@
 
 ### Attack Surface Reduction (ASR) Rules
 
+The following rules are a curated subset of Microsoft's full ASR rule set, selected for agent-specific process-creation and script-execution patterns. A blanket 'enable all ASR rules' approach causes operational disruption in developer environments — these rules target the specific behaviors that autonomous agents exploit without blocking legitimate development workflows. For the complete ASR rule reference, see the Microsoft security documentation for Attack Surface Reduction.
+
 Deploy via Intune Endpoint Protection profiles:
 
 | ASR Rule | GUID | Purpose |
@@ -11,6 +13,8 @@ Deploy via Intune Endpoint Protection profiles:
 | Block JS/VBS launching downloaded content | `d3e037e1-3eb8-44c8-a917-57927947596d` | Prevent script-based attacks |
 
 ### Application Control: WDAC and AppLocker
+
+App Control for Business is the current Microsoft product name for what was previously called Windows Defender Application Control (WDAC); the underlying technology is the same.
 
 Application control is the **primary preventive layer** against agent runtimes on Cloud PCs. The goal is to stop execution before it reaches the network — blocking `node.exe` at the firewall is useful; stopping it from running at all is stronger.
 
@@ -44,11 +48,13 @@ A practical WDAC design for Windows 365:
 $denyRules = @()
 
 # Third-party runtime: Node.js — deny by publisher, fall back to hash
+# Note: -DriverFilePath is the parameter name for the sample binary in New-CIPolicyRule,
+# regardless of whether the target is a driver — it applies to any PE binary.
 $denyRules += New-CIPolicyRule -Level FilePublisher `
   -DriverFilePath "C:\Program Files\nodejs\node.exe" `
   -Fallback SignedVersion,Publisher,Hash -Deny
 
-# Microsoft LOLBins commonly abused for agent bootstrap or post-exploit use
+# Microsoft Living-Off-the-Land Binaries (LOLBins) commonly abused for agent bootstrap or post-exploit use
 foreach ($bin in @("mshta.exe","wscript.exe","cscript.exe")) {
     $denyRules += New-CIPolicyRule -Level FileName `
       -DriverFilePath "$env:WINDIR\System32\$bin" `
@@ -206,7 +212,15 @@ Log sources that feed these detections:
 
 ### Windows Sandbox
 
-For high-risk analysis tasks, configure Cloud PCs to support Windows Sandbox:
+For high-risk analysis tasks, configure Cloud PCs to support Windows Sandbox.
+
+**Enabling via Intune:** Enable Windows Sandbox through an Intune Settings Catalog profile by setting the 'Windows Sandbox' feature to Enabled. Virtualization-based security must be enabled on the Cloud PC.
+
+**How agents invoke it:** Claude Code can execute tool calls inside Windows Sandbox by invoking `WindowsSandbox.exe` with a configuration `.wsb` file that defines the mapped folder and startup command.
+
+**Key limitations:** Windows Sandbox is ephemeral (destroyed on close), isolated from the host network by default, and requires Hyper-V on the Cloud PC. It does not persist state between invocations.
+
+Configure the Sandbox OMA-URI settings to restrict audio and network access within sandbox sessions:
 
 ```text
 OMA-URI: ./Device/Vendor/MSFT/Policy/Config/WindowsSandbox/AllowAudioInput -> 0

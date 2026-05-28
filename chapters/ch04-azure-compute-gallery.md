@@ -16,7 +16,7 @@ For this developer image scenario, ACG provides three capabilities that matter:
 
 2. **Semantic versioning and staged rollout.** When your image includes AI agents with rapidly evolving dependencies, you need the ability to publish a new version, test it with a pilot group, and promote it to production, without maintaining a naming convention spreadsheet. ACG's `Major.Minor.Patch` versioning and `excludeFromLatest` flag give you this workflow natively.
 
-3. **Pipeline integration.** Azure VM Image Builder and HashiCorp Packer both have first-class support for publishing to ACG. Your developer image becomes an "image-as-code" artefact: source-controlled templates, automated builds, and full audit trails.
+3. **Pipeline integration.** Azure VM Image Builder and HashiCorp Packer both have first-class support for publishing to ACG. Your developer image becomes an "image-as-code" artifact: source-controlled templates, automated builds, and full audit trails.
 
 ### Why AIB Over Packer
 
@@ -125,7 +125,7 @@ az sig image-definition create \
 
 This book assumes a single image definition (`W365-W11-25H2-ENU`) with one toolchain. In practice, organizations with diverse development teams (frontend, backend, data science, infrastructure) may benefit from **multiple image definitions**, each tailored to a team's specific requirements.
 
-Consider mapping image definitions to AI agent personas. OpenClaw supports persona configuration through its `SOUL.md` and agent profiles. A frontend team's agent might specialize in React and TypeScript, while a data science team's agent focuses on Python, Jupyter, and pandas. These persona differences often align with different runtime and tooling requirements in the base image:
+Consider mapping image definitions to AI agent personas. OpenClaw's persona configuration (covered in Chapter 29) is defined through SOUL.md; persona differences influence which runtimes and tools belong in each image variant. OpenClaw supports persona configuration through its `SOUL.md` and agent profiles. A frontend team's agent might specialize in React and TypeScript, while a data science team's agent focuses on Python, Jupyter, and pandas. These persona differences often align with different runtime and tooling requirements in the base image:
 
 | Image Definition | Target Team | Additional Runtimes | Agent Persona |
 |---|---|---|---|

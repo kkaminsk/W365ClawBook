@@ -4,7 +4,7 @@
 
 ### Layered Azure Network Architecture
 
-Azure networking provides two complementary controls for Windows 365 ANC deployments. They operate at different layers and should both be in place for defence-in-depth:
+Azure networking provides two complementary controls for Windows 365 Azure Network Connection (ANC) deployments. They operate at different layers and should both be in place for defence-in-depth:
 
 | Layer | Control | Scope | What it does well | What it cannot do |
 |---|---|---|---|---|
@@ -18,6 +18,8 @@ The recommended architecture for ANC environments is to use **NSGs for subnet is
 ### Default Deny Outbound (NSG)
 
 Configure the NSG associated with the Cloud PC subnet to enforce a **default deny outbound** policy, then allowlist only necessary endpoints. NSG rules use service tags and IP/port expressions; they cannot express FQDNs. For FQDN-based filtering, see the Azure Firewall section below.
+
+> **Note:** Azure NSG rules cannot match on FQDNs — they accept IP addresses and service tags only. Use Azure Firewall FQDN tags, Application Gateway, or a Network Virtual Appliance (NVA) for FQDN-based egress filtering. The FQDN values in this table are provided as reference for configuring those solutions alongside NSGs.
 
 ```text
 Priority  Direction  Action  Destination                          Port      Protocol  Purpose
@@ -72,6 +74,8 @@ For Azure Network Connection deployments, Azure Firewall provides FQDN-based egr
 #### Route Cloud PC Traffic Through Azure Firewall
 
 Use a User-Defined Route (UDR) on the Cloud PC subnet to force all non-local traffic through the Azure Firewall:
+
+> **Note:** These examples assume a hub-and-spoke network topology where hub resources (VNet, subnets, route tables) already exist. See the companion W365Claw repository for the complete hub deployment module.
 
 ```hcl
 resource "azurerm_route_table" "cloudpc_egress" {
@@ -210,19 +214,7 @@ Azure Firewall also writes diagnostic logs to Log Analytics. Use the `AzureDiagn
 
 ### Localhost Binding
 
-Configure OpenClaw to bind its management interface strictly to `127.0.0.1`:
-
-```json
-{
-  "gateway": {
-    "mode": "local",
-    "port": 18789,
-    "host": "127.0.0.1"
-  }
-}
-```
-
-Never bind to `0.0.0.0`, which would expose the control dashboard to the network.
+The OpenClaw Gateway's localhost binding behavior is covered in Chapter 29; NSG rules at the network layer cannot restrict intra-host traffic.
 
 ---
 

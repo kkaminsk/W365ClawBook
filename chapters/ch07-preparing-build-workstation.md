@@ -4,9 +4,13 @@
 
 ## Chapter 7: Preparing the Build Workstation
 
+Part III covers the three build phases that produce the Windows 365 custom image, beginning with preparing the environment that drives the Azure VM Image Builder pipeline.
+
 ### Prerequisites
 
 Before running `terraform apply`, your workstation needs:
+
+The build workstation is a trusted Azure VM or operator-managed jump server — not a personal laptop — with outbound internet access for installer downloads.
 
 | Tool | Minimum Version | Installation Method | Purpose |
 |------|----------------|-------------------|---------|
@@ -19,14 +23,14 @@ Before running `terraform apply`, your workstation needs:
 
 Four resource providers must be registered on your subscription:
 
+> **⚠️ Note:** `Microsoft.VirtualMachineImages` is the one that trips people up. It's not registered by default on most subscriptions, and the error message when it's missing is not always obvious.
+
 | Resource Provider | Purpose | Default State |
 |-------------------|---------|--------------|
 | `Microsoft.Compute` | Gallery, image definitions, image versions | Usually registered |
 | `Microsoft.VirtualMachineImages` | Azure VM Image Builder | **Often NOT registered** |
 | `Microsoft.Network` | Transient networking for build VM | Usually registered |
 | `Microsoft.ManagedIdentity` | User-assigned managed identity | Usually registered |
-
-`Microsoft.VirtualMachineImages` is the one that trips people up. It's not registered by default on most subscriptions, and the error message when it's missing is not always obvious.
 
 ### The Initialize-BuildWorkstation.ps1 Script
 

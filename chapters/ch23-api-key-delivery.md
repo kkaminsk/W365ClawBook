@@ -31,7 +31,7 @@ The MCP configuration template uses placeholder values (e.g., `__PERPLEXITY_API_
 
 > **💡 Tip:** For teams that need centralized key management in the future, consider Intune remediation scripts that read from Azure Key Vault, or a self-service portal where developers can retrieve approved API keys. The manual approach described here is the simplest starting point and avoids storing secrets in Intune configuration profiles.
 
-> **⚠️ Warning:** On Windows 11, user-level environment variables are stored in the registry and are readable by any process running under that user's security context. For high-value secrets, consider using Windows Credential Manager or Azure Key Vault integration. See **Chapter 39** for a full comparison of Windows secret storage options, the OpenClaw `SecretRef` model, and a production-ready Azure Key Vault integration via OpenClaw's `exec` provider.
+> **⚠️ Warning:** On Windows 11, user-level environment variables are stored in the registry and are readable by any process running under that user's security context. For high-value secrets, consider using Windows Credential Manager or Azure Key Vault integration. See **Chapter 39** for a full comparison of Windows secret storage options, the OpenClaw `SecretRef` model, and a production-ready Azure Key Vault integration via OpenClaw's `exec` provider. User-level environment variables are accessible to any process running as the developer, including browser extensions, malicious VS Code extensions, and scripts sourced from cloned repositories. For secrets that require protection, use the Key Vault delivery pattern described in this chapter.
 
 After setting keys for OpenClaw, confirm that no plaintext credential remains in `openclaw.json` or related config files:
 
@@ -39,66 +39,9 @@ After setting keys for OpenClaw, confirm that no plaintext credential remains in
 openclaw secrets audit --check
 ```
 
-If the audit reports residue, use `openclaw secrets configure --apply` or manually convert the affected fields to `SecretRef` objects pointing to the relevant environment variable. Chapter 39 covers this migration process step by step.
+If the audit reports residue, use `openclaw secrets configure --apply` or manually convert the affected fields to `SecretRef` objects (SecretRef is OpenClaw's credential indirection mechanism, described in Chapter 39) pointing to the relevant environment variable. Chapter 39 covers this migration process step by step.
 
-### Post-Provisioning Agent Delivery (Intune)
-
-In the **user-installed model**, all npm-based tooling — AI agents, OpenSpec, and MCP servers — is delivered **after** the Cloud PC is provisioned via **Intune Win32 app packages** targeted per-user. This provides install state detection, retries, controlled versioning, and a clear dependency ordering.
-
-**Delivery tiers:**
-
-| Package | Intune Assignment | Rationale |
-|---|---|---|
-| OpenClaw | **Required** (per-user) | Core agent; must be present on every developer Cloud PC |
-| Claude Code | **Required** (per-user) | Core agent; must be present on every developer Cloud PC |
-| Codex CLI | **Required** (per-user) | Core agent; must be present on every developer Cloud PC |
-| OpenSpec | **Required** (per-user) | Development workflow tooling; needed alongside agents |
-| MCP servers (Perplexity, Jira, etc.) | **Available** (per-user) | Optional; developers install from Company Portal on demand |
-
-**Why this ordering matters:** MCP servers depend on the AI agents being present — they are invoked by agents at runtime and their configuration references agent workspace paths. By making agents and OpenSpec **required** and MCP servers **available**, Intune ensures the foundation is in place before optional integrations are added. Developers choose which MCP servers they need from the Company Portal, avoiding unnecessary installs and reducing the attack surface.
-
-**Operational guidance:**
-
-- Target the Cloud PC device group or a dedicated agent user group.
-- Run installs in **user context** so npm global packages land in the correct user profile.
-- Keep the **image build clean**: only runtimes (Node.js, Python) and baseline tooling in the image.
-- Pin versions in the Intune payload to keep developer environments consistent.
-
-**Detection method guidance (Win32):**
-
-- Prefer **version-based detection** using the CLI output:
-  - `openclaw --version`
-  - `claude --version`
-  - `codex --version`
-  - `openspec --version`
-- Return **non-zero** when the version does not match the pinned version to trigger remediation.
-- Avoid file-path detection alone; npm global paths can vary by user profile.
-- If you must use file-based detection, use the **npm global bin path** from the user context and validate the executable exists and runs.
-- Keep detection scripts **idempotent** and **fast** to avoid repeated install loops.
-
-**Example detection script (PowerShell, user context):**
-
-```powershell
-$expected = @{
-    openclaw = "2026.2.14"
-    claude   = "2.1.42"
-    codex    = "0.101.0"
-    openspec = "0.9.1"
-}
-
-function Get-CmdVersion([string]$cmd) {
-    $v = & $cmd --version 2>$null
-    if (-not $v) { return $null }
-    return ($v -replace '[^0-9\.]','').Trim()
-}
-
-foreach ($k in $expected.Keys) {
-    $ver = Get-CmdVersion $k
-    if (-not $ver -or $ver -ne $expected[$k]) { exit 1 }
-}
-
-exit 0
-```
+For delivering OpenClaw updates, new agent versions, and skill packages after initial provisioning — separate from API key delivery — see Chapter 25 (Agent Updates Without Reprovisioning).
 
 ### Azure Key Vault Delivery Flow (Enterprise)
 
@@ -107,7 +50,7 @@ When you need centralized control over API keys, the recommended approach is to 
 **High-level flow:**
 
 1. **Store secrets in Key Vault** (one key per provider, environment, or team).
-2. **Grant the agent identity access** to read the specific secrets (least privilege).
+2. **Grant the agent account access** to read the specific secrets (least privilege).
 3. **Deploy an Intune user-context script** that:
    - Authenticates to Azure (Az module).
    - Retrieves the secret from Key Vault.
@@ -136,11 +79,13 @@ flowchart LR
 
 - [ ] Key Vault created in the same region or paired region as the Cloud PC.
 - [ ] Secret names match the variables or agent auth profile entries.
-- [ ] Agent identity granted `get` and `list` permissions only.
+- [ ] Agent account granted `get` and `list` permissions only.
 - [ ] Intune script runs in **user context** and logs success/failure.
 - [ ] Secret rotation runbook documented and tested.
 
 ### Configuring OpenClaw Memory Search
+
+The memory search integration requires a separate API credential — distinct from the Anthropic API key and agent account credentials — from your chosen vector store provider.
 
 OpenClaw's memory system (`MEMORY.md` and `memory/*.md` files) supports semantic search, allowing the agent to search its own notes by meaning rather than exact keyword matches. This requires an **embedding model API key** from a supported provider: OpenAI, Google, or Voyage AI.
 

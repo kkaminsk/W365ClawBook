@@ -2,11 +2,11 @@
 
 ### Storage Costs
 
-ACG image versions incur storage costs per version per region replica. For a single image definition with a few versions and one region, this is typically a few dollars per month.
+ACG (Azure Compute Gallery) image versions incur storage costs per version per region replica. A Standard Locally Redundant Storage (LRS) image replica costs approximately $0.05 per GB per month. A 128 GB Windows 11 image version runs approximately $6–$7 per month per replica. With the recommended three-version policy and two replicas per region, budget approximately $36–$42 per month in image storage.
 
 ### Retention Policy
 
-Retain the last 3 versions. Remove older versions to reduce storage costs:
+Retain the last 3 versions. Three versions covers the three operational states: production (current, actively used for new provisions), pilot (staged candidate for promotion), and emergency rollback (the version before current, in case a regression is discovered after rollout). Remove older versions to reduce storage costs:
 
 ```powershell
 # List all versions
@@ -27,7 +27,7 @@ Remove-AzGalleryImageVersion `
 
 ### End-of-Life Date
 
-Each image version has an `end_of_life_date` set to 90 days from build. This is a governance signal; it doesn't automatically delete the version, but it provides visibility into which versions are stale.
+Each image version has an `end_of_life_date` set to 90 days from build. `end_of_life_date` appears in the Azure portal and is queryable via `Get-AzGalleryImageVersion`, but triggers no automated action — it is a governance metadata marker, not an expiry mechanism. Expired versions remain accessible and billable until manually deleted.
 
 ### Replication Strategy
 

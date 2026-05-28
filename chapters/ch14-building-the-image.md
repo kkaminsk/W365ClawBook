@@ -4,6 +4,8 @@
 
 ## Chapter 14: Building the Image
 
+This chapter covers the recurring operation of triggering an Azure VM Image Builder (AIB) build from the Terraform module prepared in Part II. Each build produces a new version in Azure Compute Gallery (ACG) and takes approximately 45–90 minutes depending on phase configuration.
+
 ### First Deployment
 
 ```powershell
@@ -23,8 +25,6 @@ terraform apply tfplan
 ```
 
 The `terraform apply` creates all resources and triggers the AIB build in a single operation. The build proceeds through these stages:
-
-> **Disk sizing guidance:** Increase `os_disk_size_gb` (for example, to 192 or 256) when adding large toolchains, large package caches, or when Windows Update consistently consumes most of the default 128 GB disk during builds.
 
 ![Build Pipeline Phases](../Graphics/Chapter14.png)
 
@@ -61,6 +61,8 @@ graph TD
 
 The build timeout is set to 120 minutes (`build_timeout_minutes = 120`), with the Terraform timeout set to 150 minutes (`build_timeout_minutes + 30`) to allow for the API action to complete after the build finishes.
 
+> **Disk sizing guidance:** Increase `os_disk_size_gb` (for example, to 192 or 256) when adding large toolchains, large package caches, or when Windows Update consistently consumes most of the default 128 GB disk during builds.
+
 ### Monitoring the Build
 
 During the build, you can monitor progress in the Azure Portal:
@@ -78,6 +80,8 @@ az image builder show-runs `
     --resource-group "rg-w365-images" `
     --output table
 ```
+
+A healthy build ends with the AIB template resource showing `Succeeded` status in the Azure portal. A failed build leaves an `IT_rg-w365-images_*` staging resource group containing the build log and a partially-built VM — do not delete this resource group until diagnosis is complete (see Chapter 19 for teardown guidance).
 
 ---
 

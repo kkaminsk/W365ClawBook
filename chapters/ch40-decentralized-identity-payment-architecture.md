@@ -2,11 +2,29 @@
 
 ### The Missing Identity Layer
 
+Consider an OpenClaw agent tasked with purchasing inference capacity from a paid MCP tool marketplace — one that requires payment before it responds, accepts no pre-provisioned API key, and has no enterprise procurement process. Entra ID can authenticate the agent to your tenant's resources. It cannot authorize a payment to an external service on the open internet. That gap is what this chapter addresses.
+
 Chapters 26 through 39 built a security model for OpenClaw operating inside your enterprise boundary. Those controls are necessary but incomplete for one increasingly common scenario: an OpenClaw agent that must autonomously discover, pay for, and audit AI tools and services from external providers — without pre-provisioned API keys, without manual procurement, and without human approval on every transaction.
 
 That scenario requires an identity layer that Entra ID does not provide. Entra ID governs the relationship between the agent and your tenant. It has nothing to say about the relationship between the agent and an AI service on the open internet that requires payment before it responds.
 
 This chapter adds a wallet-native identity layer without dismantling the security model already in place. The governing principle is a hybrid architecture: keep inference, sessions, and most tool execution off-chain; put identity, payments, receipts, budgets, and governance on-chain or cryptographically anchored. OpenClaw stays local-first. It gains a wallet and a policy contract.
+
+---
+
+### Standards Referenced in This Chapter
+
+| Standard | Full Name | Description |
+|---|---|---|
+| CAIP-2 | Chain Agnostic Improvement Proposal 2 | Namespace format for identifying blockchains (e.g., `eip155:1` for Ethereum mainnet) |
+| CAIP-10 | Chain Agnostic Improvement Proposal 10 | Format for identifying blockchain accounts across chains |
+| CAIP-122 | Chain Agnostic Improvement Proposal 122 | Sign-In with X — chain-agnostic wallet authentication standard |
+| CAIP-74 / CACAO | Chain Agnostic Object — CACAO | Off-chain authorization object for delegating wallet capabilities |
+| ERC-4337 | Ethereum Request for Comment 4337 | Account abstraction standard enabling smart contract wallets without protocol changes |
+| ERC-1271 | Ethereum Request for Comment 1271 | Standard for smart contracts to validate signatures on behalf of an account |
+| EIP-712 | Ethereum Improvement Proposal 712 | Typed structured data hashing and signing standard |
+| EAS | Ethereum Attestation Service | On-chain and off-chain attestation infrastructure for making and verifying claims |
+| SIWX | Sign-In with X | x402's wallet authentication extension; implements CAIP-122 |
 
 ---
 
@@ -235,9 +253,9 @@ Blockchain integration adds five risks not present in a standard OpenClaw deploy
 | 2 | SIWX + DID identity layer | Wallet auth, repeat access, `did:web` service identity, `did:pkh` wallet identity | Converts payment capability into portable identity and access control |
 | 3 | Receipt signing and attestation | Signed offers/receipts, provenance anchors | Creates auditability; extends Chapter 33 monitoring to external service interactions |
 | 4 | Smart-account and budget contracts | ERC-4337/1271 wallet, `BudgetVault`, merchant allowlists | Adds policy safety for autonomous spending |
-| 5 | Isolated seller deployment | Monetized, limited-scope OpenClaw service with separate trust zone | Only after buyer-side is stable and reviewed |
+| 5 | Isolated seller deployment | Monetized, limited-scope OpenClaw service with separate trust zone | Phase 5 should not begin until Phases 1–4 have passed a security review gate that includes: (a) a documented buyer-side attack surface assessment, (b) tested BudgetVault enforcement with at least one live merchant, (c) receipt anchoring verified end-to-end, and (d) a signed-off incident response plan for wallet key compromise. |
 | 6 (selective) | Batch-settlement / channels | High-volume micropayment optimization | Only when `exact`/`upto` economics become limiting |
-| 7 (selective) | zkVM / TEE verification | Proofs for deterministic post-processing or policy checking | Compliance-heavy or adversarial settings only |
+| 7 (selective) | zero-knowledge virtual machine (zkVM) / Trusted Execution Environment (TEE) verification | Proofs for deterministic post-processing or policy checking | Compliance-heavy or adversarial settings only |
 
 Do not start Phase 5 before Phases 1 through 3 are stable and have passed security review. The seller surface is the highest-risk configuration in this chapter.
 

@@ -24,11 +24,11 @@ graph LR
 
 ### Key Design Decisions
 
-**Trigger on merge to `main`, not on push.** Image builds are expensive (60--90 minutes of compute) and produce artefacts that may be consumed by production Cloud PCs. They should only run after code review, not on every feature branch push.
+**Trigger on merge to `main`, not on push.** Image builds are expensive (60--90 minutes of compute) and produce artifacts that may be consumed by production Cloud PCs. They should only run after code review, not on every feature branch push.
 
 **Manual approval gate before `terraform apply`.** The `terraform plan` output should be reviewed by a human before the build starts. This is the last chance to catch a misconfigured version pin or an unintended source image change. In GitHub Actions, use an `environment` with required reviewers. In Azure DevOps, use an approval gate on the release stage.
 
-**Long-running job support.** The AIB build takes 60--90 minutes. Most CI/CD runners have default timeouts of 30--60 minutes. Configure the build step with a timeout of at least 150 minutes (matching the Terraform timeout).
+**Long-running job support.** The AIB (Azure VM Image Builder) build takes 60--90 minutes. Most CI/CD runners have default timeouts of 30--60 minutes. Configure the build step with a timeout of at least 150 minutes (matching the Terraform timeout).
 
 **Service principal authentication.** The pipeline authenticates to Azure using a service principal or workload identity federation (OIDC), not a personal account. The service principal needs the same RBAC permissions as the manual operator: `Contributor` on the resource group (or the four granular roles described in Chapter 5) plus the ability to trigger AIB builds.
 
@@ -131,7 +131,10 @@ jobs:
         working-directory: terraform
         run: |
           IMAGE_VERSION=$(terraform output -raw image_version 2>/dev/null || echo "unknown")
-          echo "✅ Image version $IMAGE_VERSION published to ACG"
+          echo "✅ Image version $IMAGE_VERSION published to ACG (Azure Compute Gallery)"
+          # This step confirms the build completed and extracts the version string.
+          # It does not run the full verification checklist from Chapter 15 — complete
+          # that checklist manually before importing the image into Intune.
 
       - name: Teardown Build Resources
         working-directory: terraform
@@ -142,20 +145,24 @@ jobs:
             -auto-approve
 ```
 
+> **Note:** The initialization scripts in this workflow require PowerShell. If using a Linux-hosted runner, ensure `pwsh` is installed or switch to a Windows-hosted runner (`windows-latest`) for full compatibility.
+
 ### Azure DevOps Pipeline
 
 The same workflow translates to Azure DevOps with a multi-stage YAML pipeline:
 
-- **Stage 1: Plan**: runs on every commit to `main`, produces the plan artefact
-- **Stage 2: Build**: gated by manual approval, runs `terraform apply`, waits for AIB completion
+- **Stage 1: Plan**: runs on every commit to `main`, produces the plan artifact
+- **Stage 2: Build**: gated by manual approval, runs `terraform apply`, waits for AIB (Azure VM Image Builder) completion
 - **Stage 3: Teardown**: runs automatically after build, cleans up AIB resources
 - **Stage 4: Notify**: sends a Teams notification or email that the new image version is ready for Intune import
+
+A complete Azure DevOps multi-stage pipeline template equivalent is provided in the companion W365Claw repository at `pipelines/azure-devops.yml`.
 
 The critical difference from GitHub Actions is authentication: Azure DevOps uses a **service connection** configured with a service principal or managed identity, rather than OIDC federation.
 
 ### What the Pipeline Cannot Do
 
-The pipeline ends at "image version published to ACG." The following steps remain manual:
+The pipeline ends at "image version published to ACG (Azure Compute Gallery)." The following steps remain manual:
 
 1. **Import into Windows 365**: No public API exists for importing ACG images into Intune's custom image gallery
 2. **Update provisioning policy**: Selecting the new image version in the provisioning policy is a portal operation

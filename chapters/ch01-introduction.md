@@ -34,7 +34,7 @@ Authentication flows through Entra ID with full Conditional Access support: you 
 
 For AI agent workloads, this architecture is particularly powerful because you can place the Cloud PC on a **dedicated, isolated Azure Network Connection**, a virtual network segment with no access to corporate file shares, no line-of-sight to production databases, and no lateral movement path to other workloads. The agent's network boundary is defined by Azure networking rules, not by hoping a firewall appliance catches everything.
 
-Combined with the dedicated agent account model described in Chapter 2 and the network segmentation detailed in Chapter 30, this creates a genuinely zero-trust deployment: the agent authenticates with a scoped identity, operates on an isolated network, runs under security policies it cannot modify, and produces audit logs it cannot delete.
+Combined with the agent account model described in Chapter 2 and the network segmentation detailed in Chapter 30, this creates a genuinely zero-trust deployment: the agent authenticates with a scoped identity, operates on an isolated network, runs under security policies it cannot modify, and produces audit logs it cannot delete.
 
 #### Managed, Patched, and Policy-Governed
 
@@ -51,6 +51,8 @@ Windows 365 includes **point-in-time restore** capability: the ability to save a
 For organizations that need geographic resilience, Windows 365 supports **cross-region disaster recovery**. A Cloud PC provisioned in Canada Central can fail over to Canada East (or any other supported region pair), providing business continuity without building custom replication infrastructure. The failover is managed by the platform: no runbooks, no DNS cutover, no storage account synchronization.
 
 #### Cross-Region DR and Custom Images
+
+ACG image versions (covered in Chapter 4) must be replicated to each failover region.
 
 When configuring Windows 365 cross-region disaster recovery, your custom image must be available in the failover region. This means either:
 
@@ -81,11 +83,11 @@ For decision-makers evaluating the total cost, here is a representative monthly 
 |---|---|---|
 | Microsoft 365 E3 (developer) | $36 x 10 = **$360** | All options (includes Entra P1, Intune P1) |
 | Windows 365 Enterprise (4 vCPU / 16 GB, developer) | $66 x 10 = **$660** | All options (one Cloud PC per developer) |
-| Entra ID P1 (agent account, standalone) | $6 x 10 = **$60** | Option 2 (agent identity) |
+| Entra ID P1 (agent account, standalone) | $6 x 10 = **$60** | Option 2 (agent account) |
 | Intune P1 (agent account, standalone) | $8 x 10 = **$80** | Option 2 (agent Cloud PC management) |
 | Windows 365 Enterprise (agent Cloud PC) | $66 x 10 = **$660** | Options 2 and 3 (second Cloud PC) |
 | Microsoft 365 E3 (agent account) | $36 x 10 = **$360** | Option 3 only (replaces standalone Entra P1 + Intune P1) |
-| ACG image storage (3 versions, 1 region) | **$5--15** | All options |
+| ACG image storage (3 versions, 1 region) | **$5–$15** | All options |
 | AIB build compute (1 build/month, ~2 hours) | **$2--5** | All options |
 | AI API usage | **Varies** | All options; depends on usage volume and models |
 | | | |
@@ -119,7 +121,7 @@ The PDF is available in the [GitHub repository](https://github.com/kkaminsk/W365
 
 This book is written for **enterprise IT departments** deploying AI agents to teams of developers (five, fifty, or five hundred) Cloud PCs managed under a consistent security posture with centralized image builds, Intune policy enforcement, and auditable identity controls.
 
-If you're an individual developer looking to run OpenClaw on a Cloud PC, Windows 365 is a viable platform. You get a persistent, powerful Windows desktop in the cloud that you can access from anywhere. But most of what this book describes (Terraform-managed infrastructure, Azure Compute Gallery pipelines, Intune security baselines, network segmentation, dedicated agent identities) is dramatically over-engineered for a single user. You'd be better served by provisioning a Windows 365 Business Cloud PC, installing Node.js and OpenClaw manually, and skipping the other 35 chapters.
+If you're an individual developer looking to run OpenClaw on a Cloud PC, Windows 365 is a viable platform. You get a persistent, powerful Windows desktop in the cloud that you can access from anywhere. But most of what this book describes (Terraform-managed infrastructure, Azure Compute Gallery pipelines, Intune security baselines, network segmentation, agent accounts) is dramatically over-engineered for a single user. You'd be better served by provisioning a Windows 365 Business Cloud PC, installing Node.js and OpenClaw manually, and skipping to the relevant chapters.
 
 The complexity in this book exists because enterprise deployment has enterprise requirements: repeatable image builds across dozens of machines, separation of duties between the person who builds the image and the person who uses it, compliance evidence that every Cloud PC is patched and policy-governed, and containment guarantees that limit the blast radius when an autonomous agent does something unexpected. None of that matters when it's just you on your own machine.
 

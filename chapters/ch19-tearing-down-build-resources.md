@@ -54,9 +54,11 @@ try {
 }
 ```
 
-The key is the `-target="module.image_builder"` flag, which limits destruction to only the image builder module, leaving the gallery, identity, and resource group intact.
+The `-target` flag limits Terraform to the `image_builder` module only, leaving the Azure Compute Gallery (ACG), managed identity, and resource groups untouched — exactly the scope needed to release build compute costs without affecting the image gallery.
 
 ### Cost Optimization Workflow
+
+> **Warning:** Do not run teardown if the build failed. The `IT_rg-w365-images_*` staging resource group contains the AIB (Azure VM Image Builder) build log and the partially-built VM needed for diagnosis. Run teardown only after successful build verification. Deleting the staging group prematurely destroys the diagnostic evidence.
 
 ```text
 terraform apply -> wait for build (~60-90 min) -> verify -> Teardown-BuildResources.ps1
@@ -64,11 +66,13 @@ terraform apply -> wait for build (~60-90 min) -> verify -> Teardown-BuildResour
 
 After teardown, only these resources remain (and incur cost):
 
-- Azure Compute Gallery (minimal cost)
+- Azure Compute Gallery (ACG) (minimal cost)
 - Image definition (no cost)
 - Image versions (storage cost per version per replica)
 - Resource group (no cost)
 - Managed identity (no cost)
+
+Image versions cost approximately $0.05 per GB per month in Standard LRS storage; see Chapter 20 for a complete retention cost model.
 
 ---
 

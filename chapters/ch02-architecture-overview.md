@@ -23,9 +23,9 @@ graph TB
     subgraph "Azure Compute Gallery"
         GAL[Gallery: acgW365Dev]
         DEF[Image Definition:<br/>W365-W11-25H2-ENU]
-        V1[v1.0.0 -- Production]
-        V2[v1.1.0 -- Production]
-        V3[v1.2.0 -- Canary/Pilot]
+        V1[v1.0.0 Production]
+        V2[v1.1.0 Production]
+        V3[v1.2.0 Canary/Pilot]
     end
 
     subgraph "Microsoft Intune / Windows 365"
@@ -35,8 +35,8 @@ graph TB
     end
 
     subgraph "Post-Provisioning"
-        INTUNE[Intune Delivers:<br/>-- API Keys via Settings Catalog<br/>-- VS Code Extensions<br/>-- Security Baselines]
-        LOGIN[First Login:<br/>-- Active Setup Hydration<br/>-- GitHub Desktop Hydration<br/>-- OpenClaw Config Copy]
+        INTUNE[Intune Delivers:<br/>API Keys via Settings Catalog<br/>VS Code Extensions<br/>Security Baselines]
+        LOGIN[First Login:<br/>Active Setup Hydration<br/>GitHub Desktop Hydration<br/>OpenClaw Config Copy]
     end
 
     TF --> INIT --> PLAN --> APPLY --> AIB
@@ -91,7 +91,7 @@ If you're not already familiar: **Microsoft Entra ID** (formerly Azure Active Di
 
 This creates an important architectural question for AI agent deployments: **which identity does the agent run under, and on which machine?**
 
-There are three viable models, each with different cost, security, and operational trade-offs. All models require a **minimum base licence stack** for every user and agent account: **Entra ID P1 + Windows 365 Enterprise + Intune P1**. If the user needs Microsoft 365 productivity services (Exchange Online, Teams, SharePoint, Office apps), a full **Microsoft 365 E3** licence replaces the standalone Entra P1 and Intune P1 (both are included in E3).
+There are three viable models, each with different cost, security, and operational trade-offs. Licensing requirements are summarized in Chapter 1's cost table.
 
 #### Option 1: Developer's Own Entra ID (Simple Model)
 
@@ -115,7 +115,7 @@ This account has:
 
 - **No email, no Teams, no SharePoint**, stripped of everything the agent doesn't need
 - **Access only to Git repositories and Azure DevOps projects** relevant to the development work
-- **Its own sign-in logs**, so every action is attributable to the agent identity, not the human
+- **Its own sign-in logs**, so every action is attributable to the agent account, not the human
 - **A minimal licence stack**: Entra ID P1 + Windows 365 Enterprise + Intune P1 (no M365 E3 needed because the agent doesn't use Exchange, Teams, or Office apps)
 
 The developer's primary Cloud PC (signed in as `kevin@bighatgroup.com`) remains available for non-agent work. The agent Cloud PC is a purpose-built, network-isolated environment where the blast radius of a compromised agent is fully contained.
@@ -131,7 +131,7 @@ This model is recommended when:
 
 #### Option 3: Dedicated Agent Account on a Separate Cloud PC (Fully Isolated, Full M365 Licence)
 
-Identical to Option 2, but the agent account is assigned a **full Microsoft 365 E3 licence** instead of the minimal stack. This gives the agent account access to Exchange Online, Teams, SharePoint, and Office apps under its own identity.
+Architecture is identical to Option 2, but service access scope and licensing cost differ. The agent account is assigned a **full Microsoft 365 E3 licence** instead of the minimal stack. This gives the agent account access to Exchange Online, Teams, SharePoint, and Office apps under its own identity.
 
 This model applies when:
 
@@ -156,7 +156,7 @@ This model applies when:
 
 > **💡 Tip:** You don't have to choose one model for the entire organization. Many teams start with Option 1 for interactive coding assistance and move to Option 2 or 3 when they adopt autonomous agent workflows. The image is the same in all cases; the identity model is an operational decision, not an image build decision.
 
-Chapter 27 covers the security rationale and implementation details in depth, including the emerging **Microsoft Entra Agent ID** (preview) capability that formalizes agent identity management. Chapter 27 also addresses the **local administrator question**: why granting admin rights to a network-isolated, dedicated-account Cloud PC is actually the pragmatic choice for AI agent workflows, and why the risk calculus is fundamentally different from giving admin to a corporate-network-connected laptop.
+Chapter 27 covers the security rationale and implementation details in depth, including the emerging **Microsoft Entra Agent ID** (preview) capability that formalizes agent account management. Chapter 27 also addresses the **local administrator question**: why granting admin rights to a network-isolated, dedicated-account Cloud PC is actually the pragmatic choice for AI agent workflows, and why the risk calculus is fundamentally different from giving admin to a corporate-network-connected laptop.
 
 ---
 

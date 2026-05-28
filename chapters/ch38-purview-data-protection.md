@@ -10,7 +10,7 @@ Microsoft Purview is not a single agent. The Windows-side story spans several co
 
 | Component | Installed where | Primary role | Relevance to W365 AI agent workstations |
 |---|---|---|---|
-| **Endpoint DLP** | Windows 10/11 clients (via MDE onboarding) | Monitors and restricts file egress at the moment it occurs — copy, print, upload, paste, USB, RDP | **Primary control** for agent workstations; enforces data-layer policy without additional installs |
+| **Endpoint DLP** | Windows 10/11 clients (via Microsoft Defender for Endpoint (MDE) onboarding) | Monitors and restricts file egress at the moment it occurs — copy, print, upload, paste, USB, RDP | **Primary control** for agent workstations; enforces data-layer policy without additional installs |
 | **Microsoft Purview Information Protection client** | Windows desktop (optional install) | Extends sensitivity labels to File Explorer, PowerShell, and non-Office file types | Useful when agents create or handle non-Office files (scripts, config files, data exports) that need classification |
 | **Information Protection scanner** | Windows Server for on-premises repositories | Scheduled discovery, classification, and labeling of file shares and SharePoint Server | Not applicable to Cloud PC endpoint scenarios; relevant only for on-premises file infrastructure |
 | **Defender for Endpoint platform** | Windows clients and servers | Supplies device onboarding, sensor, and telemetry channel that Endpoint DLP depends on | **Prerequisite plumbing** — Endpoint DLP rides on MDE; MDE-onboarded devices appear automatically in Purview |
@@ -31,8 +31,8 @@ flowchart LR
     C --> S[Cloud data classification service]
     S --> D[Central Purview DLP policy evaluation]
     D --> E[Endpoint enforcement result]
-    E -->|Allow / Audit| U
-    E -->|Block / Override / JIT hold| U
+    E -->|Allow / Audit| ActionAllowed[Action Allowed]
+    E -->|Block / Override / JIT hold| ActionBlocked[Action Blocked or Held]
     D --> P
 ```
 
@@ -144,7 +144,7 @@ Endpoint DLP is not free from a performance perspective. Microsoft explicitly do
 
 ### Troubleshooting Checklist
 
-**Verify device prerequisites first.** Check Windows build, Entra join/registration state, Defender antimalware client version (minimum 4.18.2110 for Endpoint DLP; 4.18.25050 for advanced label-based protection), real-time protection enabled, behavior monitoring enabled, and firewall allowance for `MpDlpService.exe`. All of these must be in place before DLP policies can enforce.
+**Verify device prerequisites first.** Check Windows build, Entra join/registration state, and Defender antimalware client version. Endpoint DLP requires MDE version 4.18.2110 or later. Advanced label-based protection requires MDE version 4.18.25050 or later. These are separate features with separate version minimums. Also verify: real-time protection enabled, behavior monitoring enabled, and firewall allowance for `MpDlpService.exe`. All of these must be in place before DLP policies can enforce.
 
 **Check policy sync status in Purview.** The Purview portal's device management view shows heartbeat, validation state, and whether policy has synchronized. If a device shows outdated policy, wait for the next sync cycle (~1 hour) or trigger a sync.
 

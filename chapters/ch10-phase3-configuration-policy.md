@@ -1,6 +1,6 @@
 ## Chapter 10: Phase 3 -- Configuration and Policy
 
-Phase 3 is where the image transforms from "tools installed" to "enterprise-ready." This phase configures Claude Code enterprise policy, creates the OpenClaw configuration template, registers Active Setup for first-login hydration, sets Teams optimisation prerequisites, generates the SBOM, and cleans up the image.
+Phase 3 is where the image transforms from "tools installed" to "enterprise-ready." This phase configures Claude Code enterprise policy, creates the OpenClaw configuration template, registers Active Setup for profile initialization via Active Setup, sets Teams optimisation prerequisites, generates the SBOM, and cleans up the image.
 
 > **💡 Note:** In earlier versions of this solution, a separate build phase installed OpenSpec and MCP server npm packages into the image. These have been moved to **post-provisioning** and are delivered via Intune:
 >
@@ -30,7 +30,7 @@ Set-Content -Path $managedSettingsPath -Value $managedSettings -Encoding UTF8
 
 The default `defaultMode` is `"allowWithPermission"`, which allows Claude Code to execute commands but prompts the user for explicit approval on operations that require elevated permissions. This strikes a balance between developer productivity and security: routine operations proceed without friction, while sensitive actions still require confirmation. For teams that want maximum control, this can be changed to `"ask"` (requires approval for all operations) in the `managed-settings.json` template. See Chapter 28 for a deep dive on all available settings, including deny-listing high-risk commands.
 
-> **💡 Tip:** The `"allowWithPermission"` default assumes your network segmentation (Chapter 30) and agent identity isolation (Chapter 27) are in place. If those controls are not yet deployed, consider starting with `"ask"` until your containment architecture is verified.
+> **💡 Tip:** The `"allowWithPermission"` default assumes your network segmentation (Chapter 30) and agent account isolation (Chapter 27) are in place. If those controls are not yet deployed, consider starting with `"ask"` until your containment architecture is verified.
 
 ### OpenClaw Configuration Template
 
@@ -91,13 +91,13 @@ if ($LASTEXITCODE -ne 0) {
 
 ### MCP Servers
 
-The Model Context Protocol (MCP) enables Claude Code and OpenClaw to interact with external services such as Jira, Microsoft Docs, Perplexity, and internal APIs. MCP servers are either npm packages (stdio transport) or HTTP endpoints (SSE transport).
+The Model Context Protocol (MCP) enables Claude Code and OpenClaw to interact with external services such as Jira, Microsoft Docs, Perplexity, and internal APIs. MCP servers are either npm packages (stdio transport) or HTTP endpoints (Server-Sent Events (SSE) transport). SSE-based MCP servers push events over HTTP and require no local binary installation — stdio-based servers run as a local process and must be installed on the machine.
 
 **Stdio MCP servers** (npm packages) are delivered **post-provisioning** as **available** Win32 apps in Intune, targeted per-user. Developers install them on demand from the Intune Company Portal. Deploying MCP servers as available (rather than required) ensures the AI agents and OpenSpec are fully installed first — MCP servers depend on the agents being present for configuration and runtime invocation.
 
 **HTTP/SSE MCP servers** (remote endpoints) don't require binary installation; they're configured via the MCP configuration file.
 
-**MCP configuration** is pre-seeded as a template in ProgramData and hydrated to the user profile at first login (alongside the OpenClaw config):
+**MCP configuration** is pre-seeded as a template in ProgramData and delivered to the user profile via profile initialization via Active Setup at first login (alongside the OpenClaw config):
 
 ```powershell
 $mcpConfigDir = "C:\ProgramData\OpenClaw\mcp"
@@ -125,11 +125,15 @@ $mcpConfig = @{
 Set-Content -Path "$mcpConfigDir\mcporter.json" -Value $mcpConfig -Encoding UTF8
 ```
 
+`mcporter.json` is OpenClaw's MCP server connection registry file, read by the Gateway at startup to discover configured MCP server endpoints.
+
 > **💡 Tip:** MCP server configurations often contain API keys. Use placeholder values (e.g., `__PERPLEXITY_API_KEY__`) in the image template and replace them post-provisioning via Intune environment variables or a user-context script that reads from Azure Key Vault. The `microsoft-docs` MCP server is a notable exception; it's a public API that requires no authentication.
 
-### Active Setup: First-Login Configuration Hydration
+### Active Setup: First-Login Profile Initialization via Active Setup
 
-Active Setup is a Windows mechanism that executes a command once per user at their first login. We use it to copy the OpenClaw configuration template into the user's profile:
+Active Setup is a Windows registry mechanism under `HKLM\SOFTWARE\Microsoft\Active Setup\Installed Components` that runs a specified command once per user on their first login to a machine. OpenClaw uses Active Setup to copy configuration templates from `C:\ProgramData\OpenClaw\config` to each user's profile directory on first login, ensuring every developer gets a correctly populated configuration without administrator intervention.
+
+We use it to copy the OpenClaw configuration template into the user's profile:
 
 ```powershell
 $hydrationScript = @'

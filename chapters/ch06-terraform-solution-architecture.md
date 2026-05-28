@@ -10,7 +10,7 @@ The core workflow is three commands:
 2. **`terraform plan`**: Compares the desired state (your `.tf` files) against the actual state (what exists in Azure) and shows what will change.
 3. **`terraform apply`**: Executes the plan, creating or modifying resources.
 
-Terraform tracks what it has created in a **state file** (`terraform.tfstate`). This is how it knows the difference between "create a new resource group" and "the resource group already exists." In this solution, state is stored locally; no remote backend is needed for a single-operator image build workflow.
+Terraform tracks what it has created in a **state file** (`terraform.tfstate`). This is how it knows the difference between "create a new resource group" and "the resource group already exists." In production deployments, state is stored in a remote Azure Storage backend (see the State Management section below); the code examples in this book use a local backend as an explicit shortcut for learning environments only.
 
 ### Why Terraform for This Solution
 
@@ -20,7 +20,7 @@ You could build everything in this book by clicking through the Azure portal. Yo
 
 **2. The plan-before-apply safety net.** When you're building images that will be deployed to production Cloud PCs, you want to review exactly what will change before it changes. `terraform plan` gives you a diff ("this RBAC assignment will be added, this image version will be created, this build will be triggered") before any API calls are made. This is particularly valuable when bumping software versions: you can see that only the image version and build template changed, and nothing else was affected.
 
-**3. Modular, parameterised configuration.** Every version number, every Azure region, every gallery name is a variable. The `terraform.tfvars` file (populated by `Initialize-TerraformVars.ps1`) is the single source of truth for the entire build. When you need to bump Node.js from v24.13.1 to v24.14.0, you change one line in `terraform.tfvars` and run `terraform apply`. Terraform recalculates the downstream effects (new download URLs, new SHA256 checksums to verify, new SBOM entries) automatically.
+**3. Modular, parameterised configuration.** Every version number, every Azure region, every gallery name is a variable. The `terraform.tfvars` file (populated by `Initialize-TerraformVars.ps1`) is the single source of truth for the entire build. When you need to bump Node.js from v24.13.1 to v24.14.0, you change one line in `terraform.tfvars` and run `terraform apply`. Terraform recalculates the downstream effects (new download URLs, new SHA256 checksums to verify, new SBOM (Software Bill of Materials) entries) automatically.
 
 **What Terraform is NOT doing here:** Terraform does not manage Windows 365 provisioning policies, Intune configuration profiles, or Entra ID groups. Those are managed through their respective admin portals or via Microsoft Graph. Terraform's scope in this solution ends at "a validated image version exists in the Azure Compute Gallery." Everything after that (importing into Windows 365, assigning to users, post-provisioning configuration) happens outside Terraform.
 
@@ -126,7 +126,7 @@ terraform {
 
 Create the storage account and container before your first `terraform init`. Enable blob versioning for state history and configure a storage account firewall to restrict access.
 
-The code examples in this book show `backend "local" {}` for simplicity during initial learning and experimentation. When you move to team usage or CI/CD pipelines, switch to the remote backend; it's a one-line change in `versions.tf` followed by `terraform init -migrate-state`.
+The code examples in this book show `backend "local" {}` as an explicit shortcut for initial learning and experimentation only. For any team usage, CI/CD pipelines, or production image builds, the remote Azure Storage backend above is the recommended configuration; switching is a one-line change in `versions.tf` followed by `terraform init -migrate-state`.
 
 > **⚠️ Warning:** The local backend offers no locking, no encryption at rest, and no audit trail. It is acceptable only for single-operator learning environments.
 
@@ -143,10 +143,10 @@ The solution exposes over 30 variables, all with sensible defaults. The critical
 | `build_timeout_minutes` | `120` | Build timeout before AIB run fails |
 | `exclude_from_latest` | `true` | Canary flag for staged rollout |
 | `node_version` | `v24.13.1` | Pinned Node.js version |
-| `python_version` | `3.14.3` | Pinned Python version (verify latest patch at python.org) |
+| `python_version` | `3.14.3` | Pinned Python version |
 | `source_image_version` | `26200.7840.260206` | Pinned Windows 11 25H2 marketplace image |
 
-Every software version is pinned to a specific release. The `source_image_version` variable includes a validation rule that rejects `"latest"`:
+Every software version is pinned to a specific release. **Note on `python_version`:** Python 3.14 was pre-release at time of writing. Verify the current stable release at python.org/downloads before setting this variable. The `source_image_version` variable includes a validation rule that rejects `"latest"`:
 
 ```hcl
 variable "source_image_version" {

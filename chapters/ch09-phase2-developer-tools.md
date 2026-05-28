@@ -22,7 +22,7 @@ if ($proc.ExitCode -ne 0) {
 }
 ```
 
-> **⚠️ Note:** The URL path must be `win32-x64-system` (System Installer), not `win32-x64` (User Installer). The W365Claw Terraform code currently uses `win32-x64` — this is a known bug that should be corrected to `win32-x64-system` before production builds. The User Installer places binaries in the Local System profile during the image build, making VS Code invisible to the actual developer.
+> **Known Issue:** The URL path must be `win32-x64-system` (System Installer), not `win32-x64` (User Installer). The W365Claw Terraform code currently uses `win32-x64` — this is a known bug that should be corrected to `win32-x64-system` before production builds. The User Installer places binaries in the Local System profile during the image build, making VS Code invisible to the actual developer.
 
 The critical argument is `/MERGETASKS="!runcode,addcontextmenufiles,addcontextmenufolders,addtopath"`:
 
@@ -61,11 +61,11 @@ Key flags:
 | `/PathOption=Cmd` | Add `git.exe` to system PATH |
 | `/NoAutoCrlf` | Don't set `core.autocrlf` -- let developers choose |
 
-### GitHub Desktop: The Hydration Mechanism
+### GitHub Desktop: Per-User Install Activation
 
 GitHub Desktop presents a unique installation architecture that's worth understanding in detail. The standard `.exe` installer is designed for per-user installation (ClickOnce-style) into AppData. For enterprise/image deployment, GitHub provides a **Machine-Wide MSI Installer**.
 
-It's vital to understand that this MSI does **not** install the application into Program Files. Instead, it installs a **provisioner** into `C:\Program Files (x86)\GitHub Desktop Deployment`. When a user logs in, the provisioner detects the login and "hydrates" (installs) the actual GitHub Desktop application into the user's `%LocalAppData%` folder.
+It's vital to understand that this MSI does **not** install the application into Program Files. Instead, it installs a **provisioner** into `C:\Program Files (x86)\GitHub Desktop Deployment`. When a user logs in, the provisioner detects the login and activates (installs) the actual GitHub Desktop application into the user's `%LocalAppData%` folder via the per-user install activation mechanism.
 
 This is exactly the behaviour you want for a Cloud PC image:
 
@@ -90,6 +90,8 @@ if ($proc.ExitCode -ne 0) {
 > **💡 Tip:** Like VS Code, GitHub Desktop is intentionally not version-pinned. GitHub's CDN always serves the latest version, and the auto-update mechanism supersedes the installed version immediately. This is a documented and accepted exception.
 
 ### Azure CLI
+
+The Azure CLI is baked into the image rather than delivered post-provisioning because build-time and post-provisioning automation scripts require it, and waiting for per-user installation would block early automation steps.
 
 ```powershell
 $AzCliVersion = "${var.azure_cli_version}"
@@ -123,7 +125,7 @@ if (Test-Path $codeBin) {
 }
 ```
 
-> **⚠️ Warning:** VS Code extension installation during the image build installs into the **default extensions directory** which, under Local System, may resolve to the system profile. This works for extensions installed via `code.cmd --install-extension` in the System installer because VS Code's System installer uses a shared extensions location. However, for user-specific extensions, use post-provisioning delivery as discussed in Chapter 24.
+> **⚠️ Warning:** VS Code extension installation during the image build installs into the **default extensions directory**. When VS Code is installed using the System installer, extensions installed via `code.cmd --install-extension` are placed in the shared system-level extensions directory (`C:\Program Files\Microsoft VS Code\extensions` or its equivalent), which VS Code makes available to all users on the machine. This is the correct and expected behaviour for system-wide extension deployment. For user-specific or optional extensions that should not be pre-installed for all users, use post-provisioning delivery as discussed in Chapter 24.
 
 ---
 

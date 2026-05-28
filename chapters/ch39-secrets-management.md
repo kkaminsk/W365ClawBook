@@ -10,7 +10,7 @@ OpenClaw's secret-loading model has a defined precedence order. When the Gateway
 2. **`.env` in the current working directory** — read at startup, not watched for changes
 3. **`~/.openclaw/.env`** — the global per-user state directory
 4. **`env` block in `openclaw.json`** — static values embedded in the config file
-5. **Login-shell import** — an optional fallback for keys that are absent from all of the above
+5. **Windows environment injection** — On Windows, secrets injected by Intune Platform Scripts into system-level environment variables become available to processes at their next startup. For user-scoped secrets, the delivery mechanism is a user-context Intune script that sets environment variables or writes to the user's credential store. This is an optional fallback for keys that are absent from all of the above.
 
 Critically, OpenClaw **never overrides an existing value**. A process-level variable injected by a service manager always wins over `.env` and config fallbacks. This means you can reliably "pin" a secret at the service-manager level without touching the config file.
 
@@ -178,7 +178,7 @@ flowchart TD
     H --> I[Model provider and channel runtime]
 ```
 
-#### PowerShell Exec Resolver
+#### PowerShell Exec Provider Script
 
 The following script implements the `exec` provider contract. Save it outside the agent workspace (for example, `C:\openclaw\scripts\openclaw-akv-resolver.ps1`):
 
@@ -301,12 +301,12 @@ az role assignment create `
 
 ### Windows Container Caveats
 
-Windows container deployments introduce a platform-specific caveat that changes the recommendation materially: Docker's Windows-container secret implementation persists secrets in **cleartext on the container root disk** because Windows has no built-in RAM-disk driver for that mount path. Kubernetes documents that Secret data on Windows nodes is written in cleartext to node-local storage unless you add compensating controls — specifically, file ACLs and BitLocker.
+Windows container deployments introduce a platform-specific caveat that changes the recommendation materially: Docker's Windows-container secret implementation persists secrets in **cleartext on the container root disk** because Windows has no built-in RAM-disk driver for that mount path. Unlike Linux containers, which can mount secrets into a tmpfs RAM-disk (an in-memory filesystem that never touches persistent disk), Windows containers have no built-in equivalent — secrets written to the container root disk persist in cleartext until the container is destroyed. Kubernetes documents that Secret data on Windows nodes is written in cleartext to node-local storage unless you add compensating controls — specifically, file ACLs and BitLocker.
 
 This makes identity-based retrieval from Key Vault the strongly preferred design for Windows containers. Concretely:
 
 - Assign a managed identity (or workload identity in AKS) to the pod or container host
-- Use the OpenClaw `exec` resolver to fetch secrets from Key Vault at activation time
+- Use the OpenClaw `exec` provider to fetch secrets from Key Vault at activation time
 - Do not mount Docker/Swarm secrets or Kubernetes Secrets as files for API keys on Windows nodes without BitLocker protecting the underlying node storage
 
 Kubernetes recommends enabling BitLocker on Windows nodes and using ACLs to restrict secret file paths. Those controls reduce the risk but do not eliminate it if the node disk can be removed and mounted elsewhere. Identity-backed vault retrieval does not depend on the disk at all.
@@ -343,7 +343,7 @@ A useful way to think about the risk profile is by ingestion pattern rather than
 |---|---|---|
 | Single developer workstation | Process-scoped env vars or SecretStore; OpenClaw `SecretRef` from `env` | Machine-scoped env vars; committing `.env` |
 | Always-on workstation or server | OpenClaw `SecretRef` with `exec` or tightly ACL'd `file` provider | Literal secrets in `openclaw.json` or `.env` |
-| Azure VM or App Service fleet | Key Vault + managed identity + OpenClaw `exec` resolver | User-scoped local stores on each VM |
+| Azure VM or App Service fleet | Key Vault + managed identity + OpenClaw `exec` provider | User-scoped local stores on each VM |
 | Windows containers | Platform secret refs or Key Vault with identity-based retrieval | Docker or Kubernetes plaintext secret mounts without BitLocker |
 | CI/CD pipelines | GitHub Actions / Azure Pipelines secret store; Key Vault integration where available | Checked-in `.env`; long-lived static secrets on agents |
 

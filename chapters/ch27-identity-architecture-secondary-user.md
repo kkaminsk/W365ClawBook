@@ -46,7 +46,14 @@ graph LR
 
 Microsoft is developing **Entra Agent ID** to formalize agent identity as a first-class concept in Entra. This section explains the technical architecture so you can evaluate it for your environment and plan a migration from secondary users when it reaches GA.
 
-**Recommendation:** Entra Agent ID is a compelling long-term solution, but its **preview status** should give production-oriented teams pause. Preview features carry no SLA, may introduce breaking changes, and can be deprecated before reaching GA. Organizations with strict change-management or compliance requirements will find it difficult to justify a preview dependency in their identity architecture. Until Entra Agent ID reaches GA with stable APIs, SLA coverage, and a clear licensing model, provision **Secondary Entra ID Users** for agents. This provides immediate segregation and auditability using GA-supported primitives, and the identity is not tied to the Cloud PC. A developer can use the same secondary agent account from their local development machine to authenticate to Azure CLI, Azure DevOps, or any Entra-integrated service, running agent workloads locally while retaining the audit separation and scoped permissions of the dedicated identity. This makes the secondary user approach useful even without Windows 365: it works anywhere `az login` does. When Entra Agent ID reaches GA, migrating from secondary users to Agent IDs should be straightforward — the scoping and Conditional Access patterns are architecturally aligned.
+Entra Agent ID is a compelling long-term solution. Before adopting it in production, evaluate these factors:
+
+- **Preview status** — not yet generally available; no SLA guarantee
+- **Risk of breaking changes** before GA
+- **No migration path documented** from the current secondary account pattern
+- **Alignment with planned future identity architecture** — when Agent ID reaches GA, scoping and Conditional Access patterns are architecturally aligned with the secondary user approach
+
+Until Entra Agent ID reaches GA with stable APIs, SLA coverage, and a clear licensing model, provision **Secondary Entra ID Users** for agents. This provides immediate segregation and auditability using GA-supported primitives, and the identity is not tied to the Cloud PC. A developer can use the same secondary agent account from their local development machine to authenticate to Azure CLI, Azure DevOps, or any Entra-integrated service, running agent workloads locally while retaining the audit separation and scoped permissions of the dedicated identity. This makes the secondary user approach useful even without Windows 365: it works anywhere `az login` does.
 
 #### The Four-Object Data Model
 
@@ -54,7 +61,7 @@ Agent ID is not a parallel directory — it is an agent-aware specialization of 
 
 | Object | Inherits from | Role |
 |--------|--------------|------|
-| `agentIdentityBlueprint` | `application` | Template and credential anchor; holds managed identity/FIC/client credentials |
+| `agentIdentityBlueprint` | `application` | Template and credential anchor; holds managed identity/Federated Identity Credentials (FIC)/client credentials |
 | `agentIdentityBlueprintPrincipal` | `servicePrincipal` | Tenant-local record of the blueprint; exposes app roles and delegated scopes |
 | `agentIdentity` | `servicePrincipal` | Primary identity for the running agent; holds no credentials itself |
 | `agentUser` | `user` | Optional 1:1 user object for systems that require a user, not a service, identity |
@@ -87,8 +94,6 @@ The administrative model adds **owners** (technical administrators), **sponsors*
 
 A critical detail: for an `agentIdentity`, Microsoft documents that **`id` and `appId` are the same value**. This is a deliberate departure from the classic application/service-principal model, where the application object's `id` (tenant-scoped) differs from its `appId` (globally unique client ID). For agent identities specifically, Microsoft collapses them to simplify agent attribution.
 
-A second subtlety: the `agentIdentityBlueprintId` property on an `agentIdentity` stores the parent blueprint's **`appId`**, not the blueprint object's `id`. If you store only object IDs and later try to correlate child agent identities by `agentIdentityBlueprintId`, you will get mismatches. Always translate to `appId` when navigating the blueprint-to-identity relationship.
-
 | Identifier | Property / claim | Scope | Notes |
 |-----------|-----------------|-------|-------|
 | Agent identity "ID" | `agentIdentity.id` = `agentIdentity.appId` | Tenant | The closest thing to an "agent ID" — but both properties hold the same value for `agentIdentity` objects specifically |
@@ -96,8 +101,10 @@ A second subtlety: the `agentIdentityBlueprintId` property on an `agentIdentity`
 | Application / client ID | `appId` | Global | The globally unique client identifier; used in token `appid`/`azp` claims |
 | Tenant ID | `tenantId` / token `tid` | Tenant | Identifies the Entra tenant, not the agent |
 | Principal ID | `properties.principalId` | ARM | Service-principal object ID for managed identities; use for RBAC; use `clientId` in app code |
-| Blueprint parent ref | `agentIdentityBlueprintId` on `agentIdentity` | — | Stores the blueprint's **`appId`**, not its `id` |
+| Blueprint parent ref | `agentIdentityBlueprintId` on `agentIdentity` | — | See warning below |
 | Agent-user parent ref | `identityParentId` on `agentUser` | — | Stores the parent agent identity's **object ID** |
+
+> **Warning:** The `agentIdentityBlueprintId` property on an `agentIdentity` stores the parent blueprint's **`appId`**, not the blueprint object's `id`. If you store only object IDs and later try to correlate child agent identities by `agentIdentityBlueprintId`, you will get mismatches. Always translate to `appId` when navigating the blueprint-to-identity relationship.
 
 #### Token Claims
 
@@ -137,7 +144,7 @@ Agent identities themselves hold **no credentials**. The blueprint is the creden
 Microsoft's recommended credential types for the blueprint, in order of preference:
 
 1. **Managed identity** (system- or user-assigned) — no secret rotation required
-2. **Federated identity credentials (FIC)** — OIDC trust to an external identity provider
+2. **Federated Identity Credentials (FIC)** — OIDC trust to an external identity provider
 3. **Client certificate** — acceptable; requires rotation management
 4. **Client secret** — explicitly not recommended for production
 
@@ -158,7 +165,9 @@ The practical migration sequence: create the blueprint and agent identity in par
 
 ### Operational Workflow
 
-#### Setting Up the Agent Identity
+The following operational workflow applies to the standard secondary account pattern (Option 2) recommended for production deployments.
+
+#### Setting Up the Agent Account
 
 1. **Create a cloud-only user** in Entra ID (e.g., `agent-claude-teamA@bighatgroup.com`). Use a naming convention that makes agent accounts immediately identifiable in audit logs.
 2. **Assign a minimal licence.** Entra ID P1 or M365 F3, enough for Entra join and Conditional Access, but no Exchange Online, Teams, or SharePoint.
@@ -193,7 +202,7 @@ Locking the developer (and by extension, the agent) out of administrative operat
 - Is on an **isolated Microsoft network** with no line-of-sight to on-premises resources
 - Has **default deny outbound** with only allowlisted endpoints (Anthropic API, GitHub, npm registry)
 - Is **enrolled in Defender for Endpoint** with Attack Surface Reduction rules active (Chapter 31)
-- Uses a **dedicated agent identity** (not the user's primary corporate account)
+- Uses a **dedicated agent account** (not the user's primary corporate account)
 
 ...is a fundamentally different risk from a local administrator on a domain-joined laptop sitting on the corporate network. The blast radius is contained. A compromised agent with local admin on this Cloud PC cannot pivot to the domain controller, cannot access file shares, cannot reach the HR system. It can damage the Cloud PC itself, which can be reprovisioned from the image in minutes.
 

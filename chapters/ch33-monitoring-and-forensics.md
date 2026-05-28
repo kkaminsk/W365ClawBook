@@ -2,6 +2,15 @@
 
 ### Sysmon Configuration
 
+#### Deploying Sysmon to Cloud PCs
+
+Sysmon (System Monitor) must be deployed before the event table below is actionable. Two deployment options:
+
+- **Baked into the image**: Install during Phase 1 (Chapter 8) using `sysmon.exe /accepteula /i sysmonconfig.xml` in the PowerShell AIB customizer block. The config file must be present in ProgramData before the install command runs.
+- **Intune Platform Script**: Deploy via an Intune Platform Script (System context) that downloads the Sysmon binary, validates its hash, and runs the install with config. This approach supports config updates without an image rebuild.
+
+Use the [SwiftOnSecurity Sysmon config](https://github.com/SwiftOnSecurity/sysmon-config) or the [Olaf Hartong modular config](https://github.com/olafhartong/sysmon-modular) as a baseline. Both are maintained community configs optimized for detection coverage.
+
 Deploy Sysmon to Cloud PCs with a configuration tuned for agent monitoring:
 
 | Event ID | What to Monitor | Why |
@@ -83,6 +92,8 @@ SigninLogs
 | project TimeGenerated, UserPrincipalName, AppDisplayName, IPAddress, ResultType, ConditionalAccessStatus
 | order by TimeGenerated desc
 ```
+
+> **Note:** The `AgentType` field referenced in this query does not exist in the current `SigninLogs` schema. This query returns no results until Microsoft updates the Azure Monitor / Sentinel data connector. Monitor Microsoft Sentinel release notes for schema updates.
 
 **Risky agent signals** — Microsoft Identity Protection exposes agent-specific risk surfaces in beta:
 
@@ -240,50 +251,17 @@ This provides sub-minute recovery from gateway crashes without depending on Intu
 
 Sysmon and Sentinel detect agent behavior at the process and network layer. Microsoft Purview adds a complementary audit trail at the **data layer** — specifically, which files were accessed, where they were attempted to be sent, and whether DLP policy blocked or allowed the egress.
 
-When an agent identity triggers a DLP block or a block-with-override event, the activity appears in **Purview Activity Explorer** tagged with the user, device, file, activity type, policy matched, and whether an override justification was provided. These events can be exported or streamed to Sentinel for correlation with process-level telemetry.
+When an agent account triggers a DLP block or a block-with-override event, the activity appears in **Purview Activity Explorer** tagged with the user, device, file, activity type, policy matched, and whether an override justification was provided. These events can be exported or streamed to Sentinel for correlation with process-level telemetry.
 
 For incident reconstruction after a suspected agent compromise, **evidence collection** can capture the original matching file from the onboarded device to Azure Blob storage (local device cache of 7, 30, or 60 days while offline). This makes the actual file available for forensic review, not just the metadata about its attempted egress.
 
-When the scope of a compromise is unknown, **Purview eDiscovery** can search content across Exchange, SharePoint, Teams, and OneDrive for files accessed or modified by the agent identity during the compromise window. Combined with the DLP audit trail, this closes the "what data left?" question that process-level telemetry alone cannot answer.
+When the scope of a compromise is unknown, **Purview eDiscovery** can search content across Exchange, SharePoint, Teams, and OneDrive for files accessed or modified by the agent account during the compromise window. Combined with the DLP audit trail, this closes the "what data left?" question that process-level telemetry alone cannot answer.
 
 For DLP audit integration into Sentinel, the `MicrosoftPurviewDLP` data connector (where available in your workspace) ingests DLP alert and policy match events into the `PurviewDLPAlert` table. Correlate on `DeviceName` and `ActorUserPrincipalName` to join DLP events with `SecurityEvent` and `SysmonEvent` records.
 
 ---
 
-## Troubleshooting Guide
-
-### Common Build Failures
-
-| Symptom | Cause | Resolution |
-|---|---|---|
-| **AIB build times out** (120+ min) | Windows Update taking too long, or large cumulative update | Increase `build_timeout_minutes` to 150--180; exclude problematic KBs |
-| **npm install fails with EACCES** | PATH not refreshed after Node.js install | Ensure `Update-SessionEnvironment` is called after MSI install |
-| **`openclaw: command not found`** after install | npm global bin not in PATH | Run `Update-SessionEnvironment`; verify `C:\Program Files\nodejs` is in system PATH |
-| **Sysprep fails** | Machine was domain-joined, or recovery partition exists | Verify source image is clean marketplace image; check for provisioning packages |
-| **Image import fails in Intune** | Missing ACG feature flags | Verify all five features (SecurityType, Hibernate, DiskController, AccelNet, SecureBoot) |
-| **Active Setup doesn't run** | Registry key malformed or version not bumped | Check `HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\OpenClaw-ConfigHydration`; verify `StubPath` and `Version` |
-| **VS Code extensions missing** after login | Extensions installed into System profile during build | Install only Copilot during build; deliver others via post-provisioning Intune script |
-| **OpenClaw gateway won't start** | Port conflict or missing config | Check if port 18789 is in use; verify `template-config.json` exists in ProgramData |
-| **Terraform plan shows perpetual diff** | Using `timestamp()` instead of `time_static` | Use the `time_static` resource pattern |
-
-### Diagnostic Commands
-
-```powershell
-# Verify all tools are in PATH
-node --version; python --version; git --version; openclaw --version; claude --version
-
-# Check Active Setup registry
-Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\OpenClaw-ConfigHydration"
-
-# Check OpenClaw gateway status
-Invoke-WebRequest -Uri "http://127.0.0.1:18789/health" -UseBasicParsing
-
-# Verify SBOM exists
-Get-ChildItem "C:\ProgramData\ImageBuild\sbom-*.json"
-
-# Check image build log (during build)
-az image builder show-runs --name "aib-w365-dev-ai-1-0-0" --resource-group "rg-w365-images" --output table
-```
+AIB and pipeline build failure troubleshooting is in Chapter 34 (Troubleshooting Reference).
 
 ---
 
