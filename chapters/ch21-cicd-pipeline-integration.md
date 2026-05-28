@@ -28,7 +28,7 @@ graph LR
 
 **Manual approval gate before `terraform apply`.** The `terraform plan` output should be reviewed by a human before the build starts. This is the last chance to catch a misconfigured version pin or an unintended source image change. In GitHub Actions, use an `environment` with required reviewers. In Azure DevOps, use an approval gate on the release stage.
 
-**Long-running job support.** The AIB (Azure VM Image Builder) build takes 60--90 minutes. Most CI/CD runners have default timeouts of 30--60 minutes. Configure the build step with a timeout of at least 150 minutes (matching the Terraform timeout).
+**Long-running job support.** The AIB (Azure VM Image Builder) build takes 60--90 minutes. Default job timeouts vary by platform: GitHub Actions defaults to 360 minutes (6 hours) per job, while Azure DevOps defaults to 60 minutes per job. Regardless of platform, set an explicit `timeout-minutes: 180` (or higher) on the AIB build job to avoid surprises if your organisation's runner pool uses a non-default policy.
 
 **Service principal authentication.** The pipeline authenticates to Azure using a service principal or workload identity federation (OIDC), not a personal account. The service principal needs the same RBAC permissions as the manual operator: `Contributor` on the resource group (or the four granular roles described in Chapter 5) plus the ability to trigger AIB builds.
 
@@ -171,6 +171,25 @@ The pipeline ends at "image version published to ACG (Azure Compute Gallery)." T
 When Microsoft provides Graph API support for custom image import, the pipeline can be extended to automate the full lifecycle. Until then, the pipeline's job is to ensure a validated, verified image version is available in ACG and ready for an administrator to pick up.
 
 > **💡 Tip:** Use the pipeline's notification step to send a message (Teams, email, Slack) with the exact image version, a summary of what changed (version bumps, security patches), and a link to the Intune custom image import page. This reduces the manual step to a single click.
+
+### DR Readiness in the Pipeline
+
+The CI/CD pipeline can also serve as a lightweight DR health monitor. The **Cloud PCs cross region disaster recovery status** report exposed through the Microsoft Graph API allows you to check whether all licensed Cloud PCs have a healthy backup in the configured backup region. Adding a scheduled pipeline job that queries this report and alerts on unhealthy devices gives you early warning of DR configuration drift — before you need the feature.
+
+```yaml
+- name: Check Cross-Region DR Status
+  run: |
+    # Requires Graph permission: CloudPC.Read.All
+    az rest \
+      --method GET \
+      --url "https://graph.microsoft.com/beta/deviceManagement/virtualEndpoint/reports/getCrossRegionDisasterRecoveryReport" \
+      --query "value[?healthStatus != 'healthy'].{user:userPrincipalName,status:healthStatus}" \
+      --output table
+```
+
+Failures in this check should block the pipeline's notification step — there is no value in announcing a new image version if the DR posture is broken.
+
+*See Chapter 41 for the full disaster recovery configuration, failover runbook, and quarterly DR drill procedure.*
 
 ---
 

@@ -11,7 +11,7 @@ Use this checklist as a pre-import gate before submitting a custom image to Wind
 - [ ] Single-session (no multi-session)
 - [ ] No recovery partitions
 - [ ] No data disks
-- [ ] No pre-installed FSLogix components (deploy via Intune policy post-provisioning; pre-baking into the image can conflict with Intune-managed FSLogix configuration)
+- [ ] No pre-installed FSLogix components (deploy via Intune policy post-provisioning; pre-baking FSLogix into the image can conflict with Intune-managed FSLogix configuration)
 - [ ] Under 3,000 Start menu apps (soft guideline; validate during testing) (Soft guideline — not enforced by Windows 365 import validation; affects first-login experience)
 - [ ] Not using disk encryption sets
 - [ ] Default 64 GB OS disk size (Windows 365 adjusts to the licence SKU)
@@ -41,6 +41,19 @@ Use this checklist as a pre-import gate before submitting a custom image to Wind
 - [ ] Teams `IsWVDEnvironment` = 1 (IsWVDEnvironment — a legacy registry key; WVD = Windows Virtual Desktop, the pre-AVD product name; still required by Windows 365 at time of writing)
 - [ ] No high/critical npm audit findings (Run `npm audit --audit-level=high`; exit 0 required)
 - [ ] `end_of_life_date` set to 90 days from build
+
+### Disaster Recovery Readiness
+
+Before deploying Cloud PCs to production users, confirm the following DR prerequisites are in place. These items are not image requirements — they are tenant and policy requirements that determine whether failover will succeed. See Chapter 41 for full configuration steps and the quarterly drill procedure.
+
+- [ ] [Manual] Point-in-time restore frequency configured to 4 or 6 hours for developer Cloud PCs
+- [ ] [Manual] Cross-region DR add-on license assigned to all production users (or DR Plus for SLA-critical workloads)
+- [ ] [Manual] User setting with cross-region DR enabled and backup region selected is assigned to in-scope groups
+- [ ] [Manual] ANC for backup region configured, tested, and can reach Key Vault and internal repositories (skip if using Microsoft-hosted network)
+- [ ] [Auto] Cross-region DR status report shows all in-scope Cloud PCs as **Healthy** (no errors)
+- [ ] [Manual] OneDrive Known Folder Move configured for all users (Desktop, Documents, Pictures redirected)
+- [ ] [Manual] Agent Git repos are configured with push on every commit; no untracked local-only commits
+- [ ] [Manual] Quarterly DR drill completed; RTO and RPO results documented
 
 ### Post-Provisioning Verification
 

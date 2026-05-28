@@ -63,6 +63,7 @@ This guide is accurate as of February 25, 2026. Microsoft services, marketplace 
   - [Chapter 8: Phase 1 -- Core Runtimes](./chapters/ch08-phase1-core-runtimes.md)
   - [Chapter 9: Phase 2 -- Developer Tools](./chapters/ch09-phase2-developer-tools.md)
   - [Chapter 10: Phase 3 -- Configuration and Policy](./chapters/ch10-phase3-configuration-policy.md)
+  - *(Chapter 11 is reserved for future content)*
   - [Chapter 12: Windows Update and Sysprep](./chapters/ch12-windows-update-sysprep.md)
   - [Chapter 13: Supply Chain Integrity](./chapters/ch13-supply-chain-integrity.md)
 - [Part IV: Operations](./chapters/ch14-building-the-image.md)
@@ -74,6 +75,7 @@ This guide is accurate as of February 25, 2026. Microsoft services, marketplace 
   - [Chapter 19: Tearing Down Build Resources](./chapters/ch19-tearing-down-build-resources.md)
   - [Chapter 20: Version Retention and Cost Management](./chapters/ch20-version-retention-cost-management.md)
   - [Chapter 21: CI/CD Pipeline Integration](./chapters/ch21-cicd-pipeline-integration.md)
+  - [Chapter 41: Disaster Recovery and Regional Failover](./chapters/ch41-disaster-recovery-regional-failover.md)
 - [Part V: Post-Provisioning](./chapters/ch22-first-login-experience.md)
   - [Chapter 22: First Login Experience](./chapters/ch22-first-login-experience.md)
   - [Chapter 23: API Key Delivery](./chapters/ch23-api-key-delivery.md)
