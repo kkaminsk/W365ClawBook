@@ -269,6 +269,38 @@ When the scope of a compromise is unknown, **Purview eDiscovery** can search con
 
 For DLP audit integration into Sentinel, the `MicrosoftPurviewDLP` data connector (where available in your workspace) ingests DLP alert and policy match events into the `PurviewDLPAlert` table. Correlate on `DeviceName` and `ActorUserPrincipalName` to join DLP events with `SecurityEvent` and `SysmonEvent` records.
 
+### From Threshold Alerts to Behavioral Intelligence
+
+The Sysmon rules and KQL queries earlier in this chapter are **threshold-based**: they fire when a specific command, process relationship, or port appears. Threshold alerting is necessary, fast, and well-understood — but it has a structural limitation against AI agents: agents exhibit *goal-directed* behavior. A compromised agent pursuing a data exfiltration objective may never execute `mimikatz.exe` or open a non-standard port. It may instead read files slowly, summarize them, and quietly relay that summary through the Anthropic API on port 443 — traffic that looks identical to a normal development session.
+
+#### Behavioral Baseline Learning
+
+An operationally mature agent monitoring posture layers **automated behavioral baseline learning** on top of threshold alerting. Rather than defining manually what anomalous looks like, baseline learning observes normal operations and flags deviations from the learned pattern. For agent environments, the following behavioral dimensions are candidates for baseline modeling:
+
+- **API call volume and timing:** A developer agent that normally makes 200–400 Anthropic API calls per day spiking to 4,000 calls over a two-hour window is behaviorally anomalous regardless of what any individual call contains.
+- **File access breadth:** An agent scoped to a specific repository that begins reading files across unrelated directories in the user profile is deviating from its normal operational footprint.
+- **Context window size distribution:** Unusually large context windows may indicate the agent is being fed large document batches — consistent with RAG poisoning or bulk exfiltration staging.
+- **Output destination patterns:** An agent that begins writing to new directories, network shares, or temporary paths outside its normal write scope warrants investigation.
+
+Microsoft Defender for Endpoint's behavioral analytics (EDR mode) provides a starting point for process-level behavioral profiling that can be tuned for agent workloads. For teams using Microsoft Sentinel, the **User and Entity Behavior Analytics (UEBA)** feature applies machine-learning anomaly detection to entities including device accounts and service principals — applicable to agent secondary accounts (Chapter 27) once those accounts accumulate a behavioral baseline over time (typically 7–14 days of observation).
+
+Advanced implementations use **continuous ML-based behavioral refinement with drift detection** — the model's understanding of "normal" updates as agent workflows evolve, while flagging baseline shifts that occur abruptly or outside expected change windows. This is the direction the field is moving, though it requires dedicated SIEM tuning investment beyond what most teams apply on initial deployment. The threshold alerting in this chapter is the foundation; behavioral baseline is the next tier.
+
+#### Full Provenance Chains: Reconstructing Agent Reasoning Traces
+
+Standard audit logging records *what happened*: a file was written, a process was spawned, a network connection was made. In agent environments, forensic investigators frequently need to know *why it happened* — which prompt triggered the decision, what tools were called in sequence, and how the output of one step became the input for the next. This requires provenance chains, not just event logs.
+
+**Full provenance chains** connect input → intermediate reasoning steps → tool calls → outputs into a single queryable trace. For Claude Code, this means correlating:
+
+1. The user prompt that initiated the session (or the injected content if indirect injection occurred)
+2. The sequence of tool calls the model made (shell commands, file reads, MCP server invocations)
+3. The outputs of each tool call and how they appear in the next model turn
+4. The final action taken and the model's stated rationale
+
+Chapter 28 covers enabling OpenTelemetry export from Claude Code. When OTel tracing is configured with distributed trace context propagation — assigning a single `trace-id` to the full agent session and linking each tool invocation as a child span — the full provenance chain becomes reconstructable from the trace backend (Azure Monitor Application Insights, Jaeger, or compatible OTEL collector).
+
+For incident response, a provenance chain transforms the forensic question from "what did the agent do?" (answerable from Sysmon + Sentinel) to "why did the agent do it, and what triggered the chain?" — the question that determines whether an incident was a misuse, a misconfiguration, or a successful attack. Prioritize provenance chain logging for agents with write access to production systems, CI/CD pipelines, or external APIs. The investment in trace infrastructure pays back disproportionately in the first major incident investigation.
+
 ---
 
 AIB and pipeline build failure troubleshooting is in Chapter 34 (Troubleshooting Reference).

@@ -27,6 +27,8 @@ The scale of agentic AI adoption — and the security readiness gap — establis
 
 These figures reframe the threat model. This is not a theoretical concern: agent-assisted attacks are operational, scalable, and increasingly automated.
 
+> **Design test — "Impossible vs. Tedious":** When evaluating a security control, ask whether it makes an attack *impossible* or merely *tedious*. Against human attackers, tedious is often sufficient — humans have limited patience and increasing cost-per-attempt. Against AI-assisted attackers, tedious is not a control at all. Frontier models can retry a friction-based bypass millions of times at near-zero per-attempt cost, with unlimited patience. A CAPTCHA, a rate-limit that doesn't terminate, an approval dialog that can be automated, or a deny rule that fires only after 50 subcommands — these are impediments for human actors and speed bumps for autonomous ones. Every control in Part VI is evaluated against this standard: if it only adds friction without enforcing a structural boundary, it is noted as a defense-in-depth layer rather than a primary control. (Source: Anthropic, *Zero Trust for AI Agents*, 2025.)
+
 ### A Two-Layer Threat Framework
 
 Security practitioners often conflate two distinct but complementary frameworks when discussing AI agent risk. Chapter 26 draws on both, because each addresses a different layer of the attack surface:
@@ -175,6 +177,14 @@ In a traditional LLM chatbot, prompt injection produces a false or harmful outpu
 
 This amplification effect means that the blast radius of a successful prompt injection scales linearly with the agent's capability surface. For OpenClaw — which has persistent memory, ClawHub skills, a WebSocket API, and multi-channel integration — the blast radius is substantially larger than for Claude Code.
 
+#### Defensive Countermeasure: Spotlighting
+
+Microsoft Research published a technique called **Spotlighting** specifically to counter indirect prompt injection in agentic systems. The mechanism marks external data — retrieved documents, API responses, tool outputs — with special delimiters that signal to the model: *this content is external context, not trusted instructions*. When the model is trained or prompted to respect these boundaries, injection payloads embedded in retrieved data lose their ability to override the system prompt.
+
+Measured results from Microsoft's research: baseline indirect injection success rates of **>50%** were reduced to **<2%** after applying Spotlighting across tested agent scenarios. The technique does not eliminate the threat — residual injection success below 2% still requires defense-in-depth — but it demonstrates that a structural boundary between trusted instructions and untrusted context can be meaningfully enforced at the model layer.
+
+Spotlighting is a model-level complement to the configuration controls in Chapter 28 and Chapter 29. Operators building custom MCP servers or OpenClaw skills that retrieve external content should apply delimiter-based input isolation — wrapping retrieved content in a clearly demarcated block — to take advantage of the same architectural principle. (Source: Anthropic, *Zero Trust for AI Agents*, 2025; Microsoft Research.)
+
 ---
 
 ### Memory and Context Poisoning
@@ -299,6 +309,23 @@ The following matrix consolidates threat severity across all ASTRIDE categories,
 | Windows Credential Manager enumeration | **Low** | **High** | **MEDIUM** | Persistent stored credentials | Ch. 28, Ch. 39 |
 | Agent identity spoofing in multi-agent orchestration | **Low** | **Medium** | **LOW** | Authorization decisions | Ch. 27 |
 | MCP Rug Pull — post-install behavior change | **Low** | **High** | **MEDIUM** | Host OS, long-term integrity | Ch. 28 |
+
+---
+
+### Zero Trust Maturity Assessment
+
+Anthropic's *Zero Trust for AI Agents* (2025) defines a three-tier maturity model across six security domains. Use the table below to assess your current posture and identify which tier your deployment targets. Each tier is additive — Enterprise assumes Foundation is in place; Advanced assumes Enterprise is in place.
+
+| Domain | Foundation | Enterprise | Advanced |
+|---|---|---|---|
+| **Identity** | Unique identifiers per agent; persistent IDs across lifecycle | X.509 certificate-based auth; full lifecycle management (Ch. 27) | Hardware-backed credentials (HSM/TPM); remote attestation; confidential computing enclaves |
+| **Access Control** | RBAC with deny-by-default | ABAC with context-aware policies; on-behalf-of scopes | Continuous authorization with real-time policy evaluation; JIT/JEA with auto-expiration |
+| **Resource Isolation** | Identity-based isolation backed by network segmentation (Ch. 30) | Sandboxed execution per agent (containers or Windows Sandbox, Ch. 31) | Hardware isolation (AMD SEV, Intel TDX); microVM architectures |
+| **Action Logging** | Comprehensive logs with timestamps and context (Ch. 33) | Immutable audit trails with cryptographic verification; real-time SIEM streaming | Full provenance chains (input → intermediate steps → output, Ch. 33) |
+| **Traceability** | Request IDs linking actions to triggering events | Distributed tracing (OpenTelemetry); session-scoped trace graphs (Ch. 28, Ch. 33) | Full provenance chains with dynamic-dispatch bridging across agent boundaries |
+| **Anomaly Detection** | Manual behavior pattern definition; threshold-based alerts (Ch. 33) | Automated baseline learning from normal operations; statistical anomaly detection | Continuous ML-based behavioral refinement with drift detection |
+
+**Where this deployment lands:** The hardening controls in Chapters 27–33 implement a solid Foundation tier across all six domains and Enterprise tier in identity, access control, and action logging. Chapters 28 and 33 include the instrumentation necessary to begin the transition to Enterprise-grade tracing. Advanced tier controls — hardware-backed identity, microVM isolation, and ML-based behavioral baselines — are forward-looking additions appropriate for regulated industries or high-value deployment environments.
 
 ---
 

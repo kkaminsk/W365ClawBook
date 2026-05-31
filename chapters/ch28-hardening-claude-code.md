@@ -47,6 +47,12 @@ Before configuring any settings, verify the installed Claude Code version meets 
 
 **Minimum required version for this deployment: 2.1.90+** (patches all known vulnerabilities as of May 2026).
 
+#### The Model-Layer Defense Baseline
+
+Before any configuration control takes effect, Claude itself provides a built-in defense layer through **constitutional classifiers** — a class of internal safety filters trained to detect and refuse jailbreak attempts, prompt injection patterns, and unsafe instruction sequences at inference time. Anthropic's own measurement found constitutional classifiers block approximately **95% of jailbreak attempts** before they reach the model's response generation stage. (Source: Anthropic, *Zero Trust for AI Agents*, 2025.)
+
+This is not a substitute for the configuration controls in this chapter — it is a floor beneath them. The remaining 5% that bypass classifier filtering, plus novel attack patterns that classifiers have not yet been trained against, are what the settings hierarchy, deny rules, and CLAUDE.md boundaries are designed to catch. The layered model is: *constitutional classifiers → managed-settings.json deny rules → OS-level WDAC (Chapter 31) → network egress controls (Chapter 30)*. No single layer is sufficient; each assumes the one above it has already been partially bypassed.
+
 #### CVE-2025-59536 — The Hooks RCE
 
 Check Point Research discovered and disclosed this vulnerability in October 2025. Claude Code hooks — shell commands defined in `.claude/settings.json` that execute automatically at lifecycle events (session start, file change, tool call) — ran *before* the trust dialog appeared when a developer opened a repository. An attacker who plants a malicious `.claude/settings.json` in a public repository achieves code execution the moment any developer opens that repo in Claude Code. The trigger is clone and open — no further user action is required beyond `git clone` and session start.

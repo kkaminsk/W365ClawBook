@@ -131,5 +131,20 @@ In August 2025, eight malicious Nx and Nx Powerpack packages were published to n
 
 The Cisco AI Defense skill scanner provides automated scanning of OpenClaw marketplace skills for known malicious patterns and policy violations. In addition to the Cisco AI Defense skill scanner, the **OWASP Agentic Skills Top 10** (`owasp.org/www-project-agentic-skills-top-10`) provides a formal, vendor-neutral taxonomy for agent skill and plugin supply-chain risk. Use it as the classification framework for your internal skill vetting decisions in conjunction with automated scanning.
 
+### The Model as a Supply Chain Risk
+
+The controls in this chapter verify the integrity of packages, binaries, and skills. They do not address a separate supply chain surface: **the base model itself**. As Claude Code and OpenClaw expand to support local model inference (open-weight models, private deployments), the model weight file becomes a supply chain artifact with its own poisoning threat.
+
+Academic research cited in Anthropic's *Zero Trust for AI Agents* (2025) found that **250 malicious documents** are sufficient to backdoor an LLM with 600 million to 13 billion parameters — and that the backdoor survives subsequent fine-tuning via RLHF and SFT. The attacker does not need code execution in your environment; they need their malicious documents included in training or fine-tuning data. For organizations that fine-tune models on internal data — customer support logs, internal documentation, code repositories — the fine-tuning data corpus is itself a supply chain input that must be controlled. Separately, approximately **100 malicious AI models** have been discovered on major model-sharing platforms (Hugging Face, Ollama libraries, others), several carrying PyTorch serialization exploits (such as the PyTorch dependency confusion attack that exfiltrated SSH keys via `postinstall`-equivalent deserialization hooks).
+
+For deployments using only Anthropic-hosted Claude models via the API, this risk is managed by Anthropic. For any deployment that introduces local model weights — experimental or production — apply the same supply chain discipline used for npm packages:
+
+- **AI-BOM (AI Bill of Materials):** Extend your Software Bill of Materials to include base model provenance. Record: model name, version/commit hash, source registry, download date, and SHA256 of the weights file. This is the AI equivalent of your `sbom-npm-global.json` already generated at image build time.
+- **Verify model provenance:** Download model weights only from the original author's canonical source or a verified mirror with a published hash. Cross-reference the hash against the model card's published digest before loading.
+- **Isolate fine-tuning data:** Treat fine-tuning data as a privileged input. Apply content filtering and source attribution before any internal corpus is used for fine-tuning. Untrusted user-generated content should never enter a fine-tuning pipeline without sanitization.
+- **Pin model versions:** Just as npm packages are pinned to exact versions, pin model weight downloads to a specific commit or release tag. Never use a `latest` alias that resolves at pull time.
+
+This guidance applies now for any team evaluating local model hosting. It will be operationally mandatory as open-weight deployment becomes standard in enterprise environments.
+
 ---
 

@@ -4,6 +4,8 @@
 
 Consider an OpenClaw agent tasked with purchasing inference capacity from a paid MCP tool marketplace — one that requires payment before it responds, accepts no pre-provisioned API key, and has no enterprise procurement process. Entra ID can authenticate the agent to your tenant's resources. It cannot authorize a payment to an external service on the open internet. That gap is what this chapter addresses.
 
+OpenClaw's plugin architecture supports every pattern described in this chapter — the provider plugin and tool plugin seams are the right insertion points for wallet logic, x402 clients, and identity adapters. However, no production-ready x402 plugin, wallet plugin, or decentralized identity plugin ships with OpenClaw as of publication. Implementing even Phase 1 of the roadmap at the end of this chapter requires writing a custom provider or tool plugin. Read this chapter as a reference architecture and a build roadmap — a specification of what to build and in what order — not as a configuration guide for features you can enable today.
+
 Chapters 26 through 39 built a security model for OpenClaw operating inside your enterprise boundary. Those controls are necessary but incomplete for one increasingly common scenario: an OpenClaw agent that must autonomously discover, pay for, and audit AI tools and services from external providers — without pre-provisioned API keys, without manual procurement, and without human approval on every transaction.
 
 That scenario requires an identity layer that Entra ID does not provide. Entra ID governs the relationship between the agent and your tenant. It has nothing to say about the relationship between the agent and an AI service on the open internet that requires payment before it responds.

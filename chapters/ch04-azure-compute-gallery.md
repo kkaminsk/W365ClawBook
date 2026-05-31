@@ -35,6 +35,7 @@ Before you build anything, the ACG image definition must satisfy Windows 365's c
 | Terraform Attribute | Purpose |
 |---------|---------|
 | `trusted_launch_enabled = true` | Enables Trusted Launch (Secure Boot + vTPM) |
+| `secure_boot_enabled = true` | Enables Secure Boot for the image definition |
 | `hibernation_enabled = true` | Required for Cloud PC hibernation |
 | `disk_controller_type_nvme_enabled = true` | Supports NVMe disk controller |
 | `accelerated_network_support_enabled = true` | Required for accelerated networking |
@@ -84,6 +85,7 @@ resource "azurerm_shared_image" "this" {
   # -- Windows 365 ACG Import Requirements --
   # These features are mandatory for Windows 365 ingestion.
   trusted_launch_enabled              = true
+  secure_boot_enabled                 = true
   hibernation_enabled                 = true
   disk_controller_type_nvme_enabled   = true
   accelerated_network_support_enabled = true
