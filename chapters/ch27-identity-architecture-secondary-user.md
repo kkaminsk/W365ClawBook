@@ -2,6 +2,10 @@
 
 ### Why Primary User Identity Fails
 
+The scale of this gap is measurable: only **18%** of security leaders express high confidence their current IAM infrastructure can handle agent identities, and only **23%** of organizations have a formal enterprise-wide strategy for agent identity management (Strata/Security Boulevard, 2026). The dominant workaround — sharing human credentials with agents because no enterprise-grade alternative has been configured — is the default posture this chapter exists to replace.
+
+The Five Eyes joint guidance on agentic AI (May 1, 2026) specifically named **privilege escalation** and **accountability gaps** as two of the five primary risk categories for enterprise agent deployments. Both risks are directly addressed by this chapter's secondary identity architecture: privilege escalation is mitigated by scoping the agent account to minimum necessary permissions, and accountability gaps are addressed by attributing all agent actions to the dedicated agent identity in Entra audit logs rather than conflating them with the human user's activity.
+
 Running autonomous agents under the primary user's interactive identity (e.g., `CORP\JSmith`) introduces three fatal security flaws:
 
 **1. Identity Conflation and Non-Repudiation.** In all Windows Event Logs, Entra ID sign-in logs, and audit trails, actions performed by the agent are attributed to the human user. If OpenClaw executes a destructive command, the logs show JSmith as the perpetrator. Security teams cannot distinguish between a malicious insider, a compromised account, or a rogue AI agent.
@@ -161,6 +165,25 @@ Agent ID is now GA. The migration from secondary Entra ID users is architectural
 | Sponsor/manager tracked out-of-band | `sponsors@odata.bind` and `owners@odata.bind` on the blueprint |
 
 The practical migration sequence: create the blueprint and agent identity in parallel with the existing secondary user account, validate token flows and Conditional Access behavior in a test tenant, then cut over by replacing `az login` credential configuration with the blueprint-to-agent-identity exchange pattern. The secondary user account can remain as a fallback during transition.
+
+#### Microsoft Agent 365 (Generally Available May 1, 2026)
+
+Microsoft Agent 365 reached general availability on May 1, 2026, at **$15/user/month** standalone. It is the enterprise control plane for managing AI agents running on Windows endpoints — including locally running agents such as OpenClaw. At GA, Agent 365 provides:
+
+- **Unified agent inventory:** discovers and catalogs all AI agents running on Windows endpoints, including unsanctioned ("shadow AI") agents such as unapproved OpenClaw deployments
+- **Entra network controls for local agents:** extends the same network policy controls used for Copilot Studio cloud agents to locally running agent runtimes
+- **Shadow AI detection page:** powered by Defender for Endpoint and Intune, surfaces agent activity detected on managed Cloud PCs and can block common OpenClaw deployment methods via Intune policy
+- **Multi-cloud agent import:** imports AWS Bedrock and Google Gemini Enterprise agents into a single inventory for cross-platform governance
+- **Asset context mapping (June 2026):** beginning June 2026, Defender provides per-agent mapping of devices, MCP servers, associated identities, and reachable cloud resources
+
+**Relationship to this chapter's architecture:**
+Agent 365 complements — and in production deployments should overlay — the manual Entra Agent ID configuration described in this chapter. Where this chapter describes building agent identity and governance controls individually, Agent 365 provides a managed control plane for those same controls. Organizations already following this chapter's secondary-user architecture will find that Agent 365 integrates cleanly: the dedicated agent Entra accounts created per this chapter appear in Agent 365's inventory as managed, governed agent identities.
+
+If Agent 365 is licensed in your organization, prefer its Shadow AI detection page as the authoritative inventory of agent activity on your Cloud PC fleet, supplementing the manual KQL queries in Chapter 33.
+
+#### NIST AI Agent Standards Initiative (February 2026)
+
+NIST's Center for AI Standards and Innovation (CAISI) launched the **AI Agent Standards Initiative** in February 2026. The initiative's NCCoE framework proposes applying **OAuth 2.0, OpenID Connect, SCIM, SPIFFE/SPIRE, and ABAC** to AI agents as distinct non-human identities requiring enterprise-grade lifecycle management. For organizations building agent identity systems that extend beyond Microsoft's Entra ecosystem — or that require cross-vendor interoperability — the NIST framework defines the emerging standards backbone. SPIFFE/SPIRE in particular provides workload identity federation that maps to the certificate-based authentication model described in the Entra Agent ID section above. Monitor `nist.gov/caisi` for evolving standards output from this initiative.
 
 ### Operational Workflow
 

@@ -33,5 +33,25 @@ code.cmd --install-extension github.copilot-chat --force
 
 This ensures extensions are installed into the correct user profile and can be updated independently via VS Code's built-in extension update mechanism. This script must run after VS Code is installed on the Cloud PC. For the Intune deployment pattern used to execute this script post-provisioning, see Chapter 25.
 
+### VS Code Internal MCP Registry and Allowlist (November 2025)
+
+VS Code shipped internal MCP registry and allowlist controls in public preview in November 2025. For enterprise Windows 365 deployments, these controls provide an additional governance layer for MCP servers used by Claude Code and other VS Code-hosted agents:
+
+**Configuring the MCP allowlist:**
+```json
+// .vscode/settings.json (machine-level via Intune Settings Catalog)
+{
+  "mcp.allowedServers": [
+    "github.com/your-org/approved-mcp-server-1",
+    "github.com/your-org/approved-mcp-server-2"
+  ],
+  "mcp.blockUnlistedServers": true
+}
+```
+
+Deploy this setting via Intune Settings Catalog to all Cloud PCs running VS Code. This prevents developers from installing unapproved MCP servers through VS Code's MCP integration, complementing the file-based MCP server allow-list controls in Chapter 28.
+
+**Monitoring:** Any attempt to install an MCP server not in the allowlist generates a VS Code warning and should generate a Defender for Endpoint alert when combined with the Chapter 33 process monitoring rules.
+
 ---
 

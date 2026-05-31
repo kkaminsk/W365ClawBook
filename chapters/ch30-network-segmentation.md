@@ -370,6 +370,8 @@ The Intrusion Detection and Prevention System (IDPS) in `Alert` mode logs signat
 
 ### Package Registry Egress: Azure Artifacts as a Private Proxy
 
+> **NSA MCP Security Advisory — May 20, 2026 (U/OO/6030316-26):** The NSA released 17-page guidance titled "Model Context Protocol: Security Design Considerations for AI-Driven Automation" finding that: MCP's rapid adoption has outpaced its security model; MCP does not define session-to-verifiable-identity mapping; authentication is optional in the spec; RBAC is not part of the protocol. NSA specifically recommends filtering outbound proxies for MCP traffic, sandboxing MCP server processes, and local MCP scans. These controls map directly to the Azure Firewall egress rules and Azure Artifacts proxy pattern described in this chapter.
+
 The opening note acknowledges that AI coding agents need access to multiple package registries (PyPI, crates.io, NuGet, Docker Hub, Maven Central). Adding all of these registries to the NSG allowlist widens the egress surface and does nothing to protect against compromised packages.
 
 **Azure Artifacts provides a better architecture:** configure Azure Artifacts upstream sources to proxy each public registry. Agents request packages from the Azure Artifacts feed; the feed fetches from the public registry on first request and caches the result. Subsequent requests are served from the Azure Artifacts cache without hitting the public registry.
@@ -410,6 +412,8 @@ resource "azuredevops_feed_upstream" "nuget" {
 ```
 
 The LiteLLM PyPI compromise (February 2026 — malicious code deploying credential harvesting and Kubernetes lateral movement across downstream builds) demonstrated that direct registry access means a compromised upstream package reaches developer machines immediately. Azure Artifacts' caching introduces a delay that allows time for compromise detection before cached packages proliferate.
+
+The **MCP Rug Pull** attack (CVE-2025-54136) demonstrated a critical gap in MCP server trust models: when an approved MCP server publishes an update swapping its benign command for a malicious payload, most MCP hosts re-approve silently because trust is bound to the tool's **name** rather than its **content or hash**. This is an additional argument for routing all npm package downloads through the Azure Artifacts proxy — the proxy creates an audit trail of every version transition, enabling detection of unexpected MCP server updates before they execute.
 
 > After configuring Azure Artifacts, update the NSG allowlist: replace the individual registry entries (priorities 131–138) with a single rule for your Azure DevOps organization's domain. Also update the `pip`, `npm`, and `cargo` configuration files in the Cloud PC image to point to the Azure Artifacts feed URL by default.
 

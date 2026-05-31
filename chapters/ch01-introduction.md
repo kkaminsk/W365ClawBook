@@ -12,11 +12,17 @@ For organizations running Windows 365 Cloud PCs, deploying these agents at scale
 
 This book answers that question end-to-end.
 
+A third credible option has emerged for organizations already standardized on VS Code: **Cline Enterprise**, which reached GA in 2025–2026 with Fortune 500 deployments (Samsung, SAP, Oracle, Salesforce). Unlike OpenClaw's background service model, Cline runs embedded within VS Code with no persistent gateway process — a lower persistence risk profile that makes it suitable as a secondary or specialist agent alongside OpenClaw. Chapter 37 includes Cline in the component matrix. The book's security framework applies to Cline's VS Code extension deployment model; the OpenClaw-specific Gateway and marketplace hardening in Chapter 29 does not apply.
+
+The open-source agentic coding agent market received significant validation in November 2025 when All-Hands AI — publisher of OpenHands, one of the leading open-source agent platforms — raised an **$18.8M Series A** for enterprise-scale cloud coding agent deployment. This funding confirms that the agent-on-Cloud-PC architecture this book describes represents a mainstream enterprise trajectory, not an experimental edge case. The hosted cloud deployment model (All Hands Online, launched November 2025) provides an alternative to the self-hosted Windows 365 model, but cannot satisfy the data sovereignty, network isolation, and enterprise security posture requirements that motivate this book's on-premises approach.
+
 ### Why Windows 365
 
 Before diving into the how, it's worth addressing the why. Why Windows 365 specifically? Why not a traditional VM, a local workstation, or a Linux container?
 
 The answer is that Windows 365 Cloud PCs sit at the intersection of three requirements that are difficult to satisfy simultaneously: **full-fidelity developer experience**, **enterprise security posture**, and **operational resilience**. No other platform delivers all three without significant compromise.
+
+> **Windows 365 for Agents (Public Preview — January 2026):** Microsoft announced a new Cloud PC variant purpose-built for agentic AI workloads on January 22, 2026. Windows 365 for Agents uses a consumption-based SKU (rather than the fixed monthly per-user pricing for standard Windows 365 Enterprise) and is designed specifically for the kind of autonomous, long-running AI agent sessions this book covers. As of publication it is in **public preview** with GA projected for Q4 2026. Organizations evaluating new deployments should monitor `learn.microsoft.com/windows-365` for GA timing and pricing. The standard Windows 365 Enterprise configuration described throughout this book remains the current production-ready path.
 
 #### A Full-Fidelity Windows Desktop
 

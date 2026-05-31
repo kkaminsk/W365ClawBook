@@ -247,6 +247,16 @@ This provides sub-minute recovery from gateway crashes without depending on Intu
 
 > **💡 Recommendation:** For production deployments, register the OpenClaw gateway as a **Windows service** using [nssm](https://nssm.cc/) (Non-Sucking Service Manager) or `node-windows`. A Windows service provides automatic restart on failure, event log integration, and SCM (Service Control Manager) lifecycle management, all of which the scheduled task watchdog must simulate. The separate [OpenClaw Gateway Watchdog](https://github.com/openclaw/gateway-watchdog) project implements exactly this pattern. The scheduled task approach above is acceptable for initial deployments and evaluation, but the Windows service model should be the target for any team relying on persistent gateway availability.
 
+### Agent 365 Asset Context Mapping (June 2026)
+
+Beginning June 2026, Microsoft Defender provides **asset context mapping** for each detected agent on the fleet — a graph of the devices the agent runs on, MCP servers it connects to, associated identities, and reachable cloud resources. This supplements the KQL queries in this chapter with a visualization layer:
+
+- Use Agent 365's asset context map as the **baseline** when investigating a security alert — it shows the full blast radius of a potentially compromised agent without requiring manual KQL joins
+- The KQL queries in this chapter remain essential for **hunting** and **automated alerting** — Agent 365's map is reactive; the KQL watchdog is proactive
+- Cross-reference the asset context map against the agent account inventory from Chapter 27 to detect unauthorized identities associated with known agent processes
+
+> **Note:** Microsoft's open-source **Agent Governance Toolkit** (released April 2026) provides structured audit logging for agent tool invocations, compatible with the Log Analytics schema queried in this chapter. Organizations using the toolkit can correlate toolkit-generated audit events with Defender process telemetry for a unified forensic trail.
+
 ### Purview Activity Explorer and DLP Forensics
 
 Sysmon and Sentinel detect agent behavior at the process and network layer. Microsoft Purview adds a complementary audit trail at the **data layer** — specifically, which files were accessed, where they were attempted to be sent, and whether DLP policy blocked or allowed the egress.

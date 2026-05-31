@@ -14,6 +14,8 @@ The threat statistics establish urgency before any configuration decision:
 - **138+ CVEs** were disclosed in under five months (through May 2026), with the monthly disclosure rate accelerating
 - **26.1%** of 42,447 agent skills sampled across ClawHub and SkillsMP had at least one security vulnerability
 - **1,200+** malicious skills were infiltrated into the ClawHub marketplace during the January–February 2026 ClawHavoc campaign
+- On **May 1, 2026**, CISA, NSA, and four allied intelligence agencies (Australia, Canada, New Zealand, UK) issued the first-ever joint guidance on agentic AI security, warning that autonomous agents **"will likely misbehave and amplifies organizations' existing frailties."** The Five Eyes advisory specifically named privilege escalation and accountability gaps (opaque decision logs) as critical risk categories for enterprise agent deployments.
+- The leading open-source agentic coding platform disclosed a critical token exfiltration vulnerability (the "Lethal Trifecta") that was privately reported in March 2025 but not patched for **148 days**. Enterprise deployments cannot rely on upstream agent vendors' security response SLAs — this chapter's minimum-version requirements and proactive monitoring controls exist precisely because patch cadence cannot be assumed.
 
 OpenClaw must be treated as untrusted code execution running with persistent credentials. Every connected integration — Slack workspace, email account, Azure DevOps, GitHub OAuth — is exposed through the agent to whatever gains control of it.
 
@@ -37,6 +39,8 @@ Before any configuration is applied, establish a minimum patched version baselin
 Monitor the community CVE tracker at `github.com/jgamblin/OpenClawCVEs` for new disclosures — the release cadence requires monitoring, not periodic review.
 
 > **On CVE-2026-41349 specifically:** This vulnerability (consent bypass) is architecturally aligned with the Chapter 26 threat model's OWASP ASI01 (Agent Goal Hijack) — it allows an authenticated attacker to permanently disable the execution approval gate that is the last line of defense before the LLM drives the agent autonomously. An agent running with `config.patch` applied to disable approval is effectively running `--dangerously-skip-permissions` (Chapter 28) in perpetuity. The patch is mandatory; there is no compensating control.
+
+> **Real-world parallel — CVE-2026-32173 (CVSS 8.6):** Microsoft's own Azure SRE Agent was found to expose live command streams through an unauthenticated WebSocket endpoint accessible to any Entra ID account holder. This confirms that WebSocket authentication bypass is not an OpenClaw-specific implementation failure — it has occurred in first-party Microsoft production agent infrastructure. The Gateway hardening controls in this chapter apply to the entire class of agent runtime WebSocket services, not only to OpenClaw's specific implementation.
 
 ---
 
@@ -133,6 +137,8 @@ CVE-2026-41349 demonstrated that the execution approval gate can be disabled via
 `approvalOnTimeout: "deny"` is critical — it ensures that if the developer is away and an approval prompt times out, the action is blocked rather than auto-approved. The default in some versions is `"allow"`.
 
 Monitor the openclaw.json file for modifications via Sysmon Event ID 11 (File Create/Overwrite). Any unauthorized write to this file is a high-priority security event.
+
+> **NSA MCP Security Advisory (May 20, 2026):** NSA document U/OO/6030316-26 formally identified that MCP's rapid adoption has outpaced its security model. Specific findings applicable to OpenClaw: MCP does not define session-to-verifiable-identity mapping; authentication is optional in the spec; RBAC is not part of the protocol. NSA's recommended mitigations — least-privilege tokens per action, signed provenance for dynamic tool discovery, outbound filtering, and local MCP scans — align with the controls in this chapter. Organizations deploying OpenClaw under U.S. government contracts should note NSA's specified compliance timelines: MCP risk assessment within 30 days of contract award, cryptographic isolation within 90 days.
 
 ---
 
@@ -241,6 +247,32 @@ A security-trained reviewer must sign off on each skill before publication to th
 | Version pinning | All dependencies pinned to specific versions (not `latest`) |
 | Changelog | Version bump accompanied by a meaningful changelog entry |
 
+#### The Second-Order Supply Chain Threat: npm Packages as Attack Intermediaries
+
+The ClawHub marketplace is the primary supply-chain surface for OpenClaw skills. A separate, orthogonal threat emerged in 2025–2026: **npm packages that weaponize AI coding agents themselves as malware delivery intermediaries**.
+
+In August 2025, eight malicious Nx and Nx Powerpack releases were pushed to npm with `postinstall` scripts that directly invoked Claude Code, Gemini CLI, and Amazon Q CLI using unsafe flags to bypass guardrails and scan for secrets. The packages were live for 5 hours 20 minutes (documented by Snyk). In September 2025, the Shai-Hulud campaign trojanized 40+ npm packages including widely-used utilities; injected code ran TruffleHog to harvest tokens and planted GitHub Actions workflows in victim repositories.
+
+This attack vector is distinct from ClawHub marketplace poisoning:
+- **ClawHub threat:** malicious skills installed intentionally by the developer
+- **npm intermediary threat:** a package the agent installs *during a coding task* carries a payload that invokes the agent itself as an execution tool
+
+**Mitigation:** Add the following to the skill vetting pipeline's Gate 2 (Dependency Provenance Check):
+
+```bash
+# Verify postinstall scripts are absent from any npm package before agent-driven install
+npm pack --dry-run <package> | grep "postinstall"
+# Any postinstall result for a package not explicitly approved is a vetting failure
+```
+
+Also: enforce the Azure Artifacts proxy (Chapter 30) as a **mandatory egress path** for all npm operations. The proxy acts as a logging and inspection layer that records every package download during agent-driven tasks, enabling retroactive detection if a malicious package reached the environment.
+
+OWASP's **Agentic Skills Top 10** (`owasp.org/www-project-agentic-skills-top-10`) provides the formal taxonomy for agent skill and plugin supply chain risk — use it as the classification framework for your internal skill vetting decisions.
+
+#### Microsoft Agent Governance Toolkit
+
+Microsoft released the **Agent Governance Toolkit** as open source in April 2026 (`opensource.microsoft.com/blog/2026/04/02/introducing-the-agent-governance-toolkit`). It provides runtime security policy enforcement, audit logging, identity attribution, and tool invocation controls for AI agents. A community OpenClaw integration is included in the toolkit repository. For organizations implementing the governance controls described in this chapter programmatically, the Agent Governance Toolkit is the Microsoft-supported reference implementation.
+
 ---
 
 ### Persistent Memory Hardening
@@ -254,7 +286,21 @@ OpenClaw maintains persistent memory across sessions in several file types:
 - **Project memory files** — workspace-specific context, often containing repository architecture, API endpoints, and internal URLs.
 - **SQLite databases** — structured long-term memory for some OpenClaw configurations.
 
-The MINJA attack (NeurIPS 2025, Chapter 26) demonstrated that attackers can inject records into agent memory through query-only interaction — no direct file access required. Protecting the files themselves is necessary but not sufficient.
+The MINJA attack (NeurIPS 2025) demonstrated that attackers can inject records into agent memory through query-only interaction — no direct file access required. Quantified findings:
+- **95% injection success rate** through regular queries with no special privileges
+- **70% downstream attack success rate** in subsequent task manipulation
+- Attack success jumps from 40% baseline to **80%+** in memory-augmented (RAG) agents — counter-intuitively, memory-augmented agents are **more** vulnerable, not less
+- Injected instructions persist across session boundaries and are recalled days or weeks later without re-injection
+
+OWASP classifies this as **ASI06 — Memory and Context Poisoning** in the 2026 Agentic Top 10.
+
+Protecting the files themselves is necessary but not sufficient. Apply these five architectural defense layers in addition to the file-level controls below:
+
+1. **Memory partitioning** — separate SOUL.md (identity/values) from MEMORY.md (operational memory) from project memory files; apply different integrity checking cadences to each
+2. **Context isolation** — ensure project memory files from one repository cannot be read by OpenClaw sessions working in a different repository
+3. **Provenance tracking** — add a comment header to SOUL.md and MEMORY.md recording the last human-reviewed revision hash: `<!-- Last reviewed: 2026-05-31, sha256: abc123 -->`
+4. **Temporal decay** — periodically archive or review MEMORY.md entries older than 30 days; stale memory accumulation is a persistent poisoning surface
+5. **Behavioral monitoring** — Chapter 33's watchdog queries should baseline normal agent output patterns and alert on deviation consistent with goal-hijack behavior
 
 #### NTFS Permission Hardening
 

@@ -102,11 +102,34 @@ Software versions are pinned at two levels: **Terraform variables** for image-bu
 | Package | Version | Pin Method |
 |---------|---------|-----------|
 | OpenSpec | 0.9.1 | `npm install -g @fission-ai/openspec@0.9.1` |
-| OpenClaw | 2026.2.14 | `npm install -g openclaw@2026.2.14` |
-| Claude Code | 2.1.42 | `npm install -g @anthropic-ai/claude-code@2.1.42` |
+| OpenClaw | 2026.x.x (verify current stable at npmjs.com/package/openclaw before build) | `npm install -g openclaw@<version>` |
+| Claude Code | 2.1.x (verify current stable at npmjs.com/package/@anthropic-ai/claude-code before build) | `npm install -g @anthropic-ai/claude-code@<version>` |
 | Codex CLI | 0.101.0 | `npm install -g @openai/codex@0.101.0` |
 
 Post-provisioning pins are managed outside Terraform, in Intune platform scripts. This decouples agent and tooling release cycles from image builds — agents can be updated on running Cloud PCs without reprovisioning (see Chapter 25). Always pin to exact versions; never use `latest`.
+
+### The Second-Order Supply Chain Threat: Agent-Driven Package Installs
+
+The controls in this chapter verify the integrity of binaries downloaded **at image build time**. A separate supply chain surface requires different controls: **npm packages installed by agents during coding tasks**.
+
+In August 2025, eight malicious Nx and Nx Powerpack packages were published to npm with `postinstall` scripts that directly invoked Claude Code, Gemini CLI, and Amazon Q CLI using unsafe flags to scan for secrets (documented by Snyk). The packages were live for 5 hours 20 minutes. This attack bypasses all build-time SHA256 verification because the poisoned package is downloaded after provisioning, during a live agent session.
+
+**Three mitigations for this threat:**
+
+1. **Mandatory Azure Artifacts proxy** (Chapter 30) — route all npm, PyPI, and other registry traffic through your Azure Artifacts instance. This creates an audit trail of every package download during agent sessions and allows blocking of packages not in your approved feed.
+
+2. **Block postinstall scripts globally** — add `.npmrc` configuration to the image and to the managed OpenClaw configuration:
+   ```
+   # C:\ProgramData\npm\etc\.npmrc (machine-wide)
+   ignore-scripts=true
+   ```
+   Add an exception process for packages that legitimately require postinstall (document each exception in your internal skill registry).
+
+3. **OWASP Agentic Skills Top 10 classification** — use the OWASP Agentic Skills Top 10 (`owasp.org/www-project-agentic-skills-top-10`) as the risk classification framework when evaluating any agent-installable package, not only OpenClaw skills.
+
+### Skill Scanner and Vendor-Neutral Risk Classification
+
+The Cisco AI Defense skill scanner provides automated scanning of OpenClaw marketplace skills for known malicious patterns and policy violations. In addition to the Cisco AI Defense skill scanner, the **OWASP Agentic Skills Top 10** (`owasp.org/www-project-agentic-skills-top-10`) provides a formal, vendor-neutral taxonomy for agent skill and plugin supply-chain risk. Use it as the classification framework for your internal skill vetting decisions in conjunction with automated scanning.
 
 ---
 

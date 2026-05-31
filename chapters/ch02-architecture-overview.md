@@ -61,6 +61,8 @@ graph TB
 
 **Layer 3: Windows 365 Ingestion.** An administrator imports the image version from ACG into Intune (Devices > Windows 365 > Custom images > Add > Azure Compute Gallery). The imported image is assigned to a provisioning policy targeting a developer security group. New Cloud PCs are provisioned from this image.
 
+> **Note:** This architecture targets standard **Windows 365 Enterprise** Cloud PCs, which are in general availability. Microsoft announced **Windows 365 for Agents** — a consumption-based SKU purpose-built for agentic AI workloads — in public preview on January 22, 2026 (GA projected Q4 2026). When Windows 365 for Agents reaches GA, its provisioning flow is expected to integrate with the same ACG and Intune pipeline described in this chapter, with potential differences in SKU selection and licensing. Monitor Microsoft's documentation for updates before provisioning new agentic workloads.
+
 **Layer 4: Post-Provisioning.** Intune delivers API keys, VS Code extensions, and security baselines to running Cloud PCs. On first login, Active Setup copies the OpenClaw configuration template to the user's profile, and GitHub Desktop hydrates from the machine-wide provisioner.
 
 ### The "Image Build vs Post-Provisioning" Split Philosophy

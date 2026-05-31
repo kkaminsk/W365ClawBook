@@ -237,6 +237,16 @@ As discussed in Chapter 28, disable the WebClient service to neutralize the WebD
 Set-Service -Name WebClient -StartupType Disabled -Status Stopped
 ```
 
+### Microsoft Agent 365 and Endpoint Visibility (GA May 1, 2026)
+
+Microsoft Agent 365, generally available since May 1, 2026, adds a dedicated **Shadow AI detection page** to the Microsoft Security portal, powered by Defender for Endpoint and Intune telemetry. For Windows 365 Cloud PC fleets:
+
+- Agent 365 automatically surfaces locally running AI agents detected via process telemetry — including unsanctioned OpenClaw deployments
+- From **June 2026**, Agent 365's **asset context mapping** maps each detected agent to its associated devices, MCP servers, identities, and reachable cloud resources — providing a complete blast-radius picture for each agent running on the fleet
+- Agent 365 can enforce Intune policies to block common unauthorized agent deployment methods (npm global installs of unapproved packages) as a complementary control to the application control policies in this chapter
+
+If Agent 365 is licensed, configure its Shadow AI detection page as the authoritative discovery source for unauthorized agent activity, supplementing the endpoint protection rules in this chapter.
+
 ### Data-Layer Controls
 
 The controls in this chapter prevent malicious execution and lateral movement, but they cannot stop sensitive data that leaves through channels a user or agent is legitimately permitted to use — copy-to-USB, browser upload, print, or clipboard. Microsoft Purview Endpoint DLP closes that gap by intercepting those operations at the moment they occur and applying policy based on the content of the file. For how to configure Endpoint DLP, sensitivity labels, and advanced label-based protection for agent workstations, see Chapter 38.

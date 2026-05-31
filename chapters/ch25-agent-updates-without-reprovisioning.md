@@ -9,7 +9,16 @@ npm update -g @anthropic-ai/claude-code
 npm update -g @openai/codex
 npm update -g @fission-ai/openspec
 npm update -g @perplexity-ai/mcp-server
+# Optional: Cline (if deployed as an additional agent)
+# npm update -g @cline/cline
 ```
+
+> **Supply chain risk on agent updates:** npm update commands execute the updated package's `postinstall` scripts. The August 2025 Nx supply chain attack demonstrated that `postinstall` scripts can invoke AI agents with unsafe flags to scan for secrets. Before running `npm update -g` for any agent package:
+> 1. Verify the new version against your Azure Artifacts proxy audit log
+> 2. Review the release notes for the new version at the package's official repository
+> 3. Consider using `npm install -g <package>@<specific-version>` (pinned) rather than `npm update -g` (latest matching)
+>
+> This applies equally to OpenClaw, Claude Code, and any other npm-distributed agent.
 
 For controlled updates with specific versions:
 

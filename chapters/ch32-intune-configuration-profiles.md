@@ -103,3 +103,15 @@ For automated verification of the full build and configuration baseline, see the
 
 ---
 
+### Agent 365 Policy Integration
+
+Microsoft Agent 365 (GA May 1, 2026) exposes Intune-compatible policies for governing locally running AI agents. For organizations licensed for Agent 365, these policies extend the manual Intune profiles in this chapter:
+
+- **Agent deployment controls:** Agent 365 can block npm-based agent installations via Intune policy, supplementing the WDAC/AppLocker execution controls
+- **MCP server allowlist:** Agent 365 integrates with the VS Code MCP allowlist controls (public preview, November 2025) for centralized MCP governance
+- **Conditional Access integration:** Agent 365 contributes agent-specific risk signals to Entra Conditional Access, enabling access decisions based on detected agent behavior rather than only device compliance state
+
+Configure Agent 365 policies in **Endpoint security → Agent governance** within the Intune admin center, alongside the existing profiles described in this chapter.
+
+---
+
