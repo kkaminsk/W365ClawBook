@@ -132,6 +132,18 @@ Endpoint DLP is not free from a performance perspective. Microsoft explicitly do
 
 ### Key Limitations for Agent Environments
 
+> **⚠️ Warning — PowerShell 7 is not supported by the Information Protection client:** The `AIPService` and `PurviewInformationProtection` PowerShell modules require **PowerShell 5.1**. This deployment uses PowerShell 7 everywhere else, so any Purview classification or labeling automation must be invoked in a separate PS5.1 context. The safe invocation pattern from within a PS7 workflow is:
+>
+> ```powershell
+> # Call PS5.1 from within a PS7 script
+> & "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -Version 5.1 -NonInteractive -Command {
+>     Import-Module PurviewInformationProtection
+>     # ... Purview automation here
+> }
+> ```
+>
+> Do not attempt to `Import-Module AIPService` or `Import-Module PurviewInformationProtection` in a PS7 session — the modules will fail to load. Build any Purview automation scripts as standalone `.ps1` files targeting `#Requires -Version 5.1` and invoke them via the pattern above or as a separate Intune Platform Script targeting PS5.1.
+
 | Limitation | Impact | Mitigation |
 |---|---|---|
 | **Unsaved data is invisible** | Agents processing content in memory without writing to a local file cannot be inspected | Ensure agent workflows write intermediate results locally; treat fully in-memory pipelines as unmonitored |

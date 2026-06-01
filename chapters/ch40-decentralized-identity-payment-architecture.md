@@ -16,17 +16,17 @@ This chapter adds a wallet-native identity layer without dismantling the securit
 
 ### Standards Referenced in This Chapter
 
-| Standard | Full Name | Description |
-|---|---|---|
-| CAIP-2 | Chain Agnostic Improvement Proposal 2 | Namespace format for identifying blockchains (e.g., `eip155:1` for Ethereum mainnet) |
-| CAIP-10 | Chain Agnostic Improvement Proposal 10 | Format for identifying blockchain accounts across chains |
-| CAIP-122 | Chain Agnostic Improvement Proposal 122 | Sign-In with X — chain-agnostic wallet authentication standard |
-| CAIP-74 / CACAO | Chain Agnostic Object — CACAO | Off-chain authorization object for delegating wallet capabilities |
-| ERC-4337 | Ethereum Request for Comment 4337 | Account abstraction standard enabling smart contract wallets without protocol changes |
-| ERC-1271 | Ethereum Request for Comment 1271 | Standard for smart contracts to validate signatures on behalf of an account |
-| EIP-712 | Ethereum Improvement Proposal 712 | Typed structured data hashing and signing standard |
-| EAS | Ethereum Attestation Service | On-chain and off-chain attestation infrastructure for making and verifying claims |
-| SIWX | Sign-In with X | x402's wallet authentication extension; implements CAIP-122 |
+| Standard | Full Name | Description | Canonical Source |
+|---|---|---|---|
+| CAIP-2 | Chain Agnostic Improvement Proposal 2 | Namespace format for identifying blockchains (e.g., `eip155:1` for Ethereum mainnet) | [github.com/ChainAgnostic/CAIPs](https://github.com/ChainAgnostic/CAIPs/blob/main/CAIPs/caip-2.md) |
+| CAIP-10 | Chain Agnostic Improvement Proposal 10 | Format for identifying blockchain accounts across chains | [github.com/ChainAgnostic/CAIPs](https://github.com/ChainAgnostic/CAIPs/blob/main/CAIPs/caip-10.md) |
+| CAIP-122 | Chain Agnostic Improvement Proposal 122 | Sign-In with X — chain-agnostic wallet authentication standard | [github.com/ChainAgnostic/CAIPs](https://github.com/ChainAgnostic/CAIPs/blob/main/CAIPs/caip-122.md) |
+| CAIP-74 / CACAO | Chain Agnostic Object — CACAO | Off-chain authorization object for delegating wallet capabilities | [github.com/ChainAgnostic/CAIPs](https://github.com/ChainAgnostic/CAIPs/blob/main/CAIPs/caip-74.md) |
+| ERC-4337 | Ethereum Request for Comment 4337 | Account abstraction standard enabling smart contract wallets without protocol changes | [eips.ethereum.org/EIPS/eip-4337](https://eips.ethereum.org/EIPS/eip-4337) |
+| ERC-1271 | Ethereum Request for Comment 1271 | Standard for smart contracts to validate signatures on behalf of an account | [eips.ethereum.org/EIPS/eip-1271](https://eips.ethereum.org/EIPS/eip-1271) |
+| EIP-712 | Ethereum Improvement Proposal 712 | Typed structured data hashing and signing standard | [eips.ethereum.org/EIPS/eip-712](https://eips.ethereum.org/EIPS/eip-712) |
+| EAS | Ethereum Attestation Service | On-chain and off-chain attestation infrastructure for making and verifying claims | [attest.org](https://attest.org) |
+| SIWX | Sign-In with X | x402's wallet authentication extension; implements CAIP-122 | [chainagnostic.org](https://chainagnostic.org) |
 
 ---
 

@@ -215,7 +215,37 @@ OpenClaw and Claude Code sessions have specific behaviours during regional outag
 
 **MCP server state.** MCP servers running as local processes on the Cloud PC are restarted from the restore point on the temporary Cloud PC. Ephemeral state (model context, tool results held in memory) is lost. The managed-settings policy and MCP server configuration in `C:\ProgramData\OpenClaw\` is restored to the state at the last restore point.
 
-**Git repositories** cloned to the local disk are present at the restore point state. Any commits made between the last restore point and the outage that were not pushed to the remote are lost. Enforce frequent push discipline in agent workflow design, and consider pre-push hooks that checkpoint agent context to a remote-backed location before each push.
+**Git repositories** cloned to the local disk are present at the restore point state. Any commits made between the last restore point and the outage that were not pushed to the remote are lost. Enforce frequent push discipline in agent workflow design. Use a Git pre-push hook to checkpoint agent context to an OneDrive-backed location before each push:
+
+**Example `.git/hooks/pre-push`** (create in each repository; mark executable):
+
+```bash
+#!/bin/sh
+# Checkpoint OpenClaw session state to OneDrive before every push.
+# Runs in the Git repository's context — adjust ONEDRIVE_PATH as needed.
+
+ONEDRIVE_PATH="$USERPROFILE/OneDrive - $(hostname)/AgentBackups"
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+BACKUP_DIR="$ONEDRIVE_PATH/$(basename $(pwd))/$TIMESTAMP"
+
+mkdir -p "$BACKUP_DIR"
+
+# Checkpoint OpenClaw session state if gateway is running
+if command -v openclaw >/dev/null 2>&1; then
+    openclaw session export "$BACKUP_DIR/session.json" 2>/dev/null || true
+fi
+
+# Copy agent workspace files to the backup location
+WORKSPACE="$USERPROFILE/Documents/OpenClawWorkspace"
+if [ -d "$WORKSPACE" ]; then
+    cp -r "$WORKSPACE" "$BACKUP_DIR/workspace" 2>/dev/null || true
+fi
+
+# Always allow the push to proceed
+exit 0
+```
+
+Install this hook for all new repositories by adding it to your Git template directory (`git config --global init.templateDir`), or deploy it via an Intune script that runs `git config --global core.hooksPath` pointing to a shared hooks directory in a OneDrive-backed location.
 
 ---
 

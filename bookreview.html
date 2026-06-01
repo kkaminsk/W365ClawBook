@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Book Review — Deploying OpenClaw with Windows 365</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3350;
+    --text: #e2e4f0;
+    --muted: #7b80a0;
+    --critical: #ff4d6d;
+    --critical-bg: #2a0d15;
+    --critical-border: #7a1530;
+    --high: #ff8c42;
+    --high-bg: #251507;
+    --high-border: #7a3500;
+    --medium: #f5c542;
+    --medium-bg: #231d05;
+    --medium-border: #7a5f00;
+    --low: #4db8ff;
+    --low-bg: #05162a;
+    --low-border: #005a99;
+    --positive: #4dff91;
+    --code-bg: #12151e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.65;
+    padding: 2rem 1rem;
+  }
+
+  .container { max-width: 960px; margin: 0 auto; }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 2rem;
+    margin-bottom: 2.5rem;
+  }
+
+  header h1 { font-size: 1.9rem; font-weight: 700; margin-bottom: 0.4rem; }
+  header .subtitle { color: var(--muted); font-size: 0.95rem; }
+  header .meta { margin-top: 1rem; font-size: 0.85rem; color: var(--muted); }
+  header .meta span { margin-right: 1.5rem; }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .summary-card {
+    border-radius: 8px;
+    padding: 1.2rem;
+    text-align: center;
+    border: 1px solid;
+  }
+
+  .summary-card.critical { background: var(--critical-bg); border-color: var(--critical-border); }
+  .summary-card.high     { background: var(--high-bg);     border-color: var(--high-border); }
+  .summary-card.medium   { background: var(--medium-bg);   border-color: var(--medium-border); }
+  .summary-card.low      { background: var(--low-bg);      border-color: var(--low-border); }
+
+  .summary-card .count { font-size: 2.4rem; font-weight: 800; line-height: 1; }
+  .summary-card.critical .count { color: var(--critical); }
+  .summary-card.high     .count { color: var(--high); }
+  .summary-card.medium   .count { color: var(--medium); }
+  .summary-card.low      .count { color: var(--low); }
+  .summary-card .label { font-size: 0.8rem; color: var(--muted); margin-top: 0.3rem; text-transform: uppercase; letter-spacing: 0.08em; }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 2.5rem 0 1.2rem;
+  }
+
+  .section-header h2 { font-size: 1.15rem; font-weight: 700; }
+
+  .badge {
+    display: inline-block;
+    padding: 0.2em 0.7em;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .badge.critical { background: var(--critical-bg); color: var(--critical); border: 1px solid var(--critical-border); }
+  .badge.high     { background: var(--high-bg);     color: var(--high);     border: 1px solid var(--high-border); }
+  .badge.medium   { background: var(--medium-bg);   color: var(--medium);   border: 1px solid var(--medium-border); }
+  .badge.low      { background: var(--low-bg);      color: var(--low);      border: 1px solid var(--low-border); }
+
+  .finding {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+  }
+
+  .finding-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem 1.2rem 0.85rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .finding-header .number {
+    flex-shrink: 0;
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-family: monospace;
+    padding-top: 0.15rem;
+    min-width: 2rem;
+  }
+
+  .finding-header .title { font-weight: 600; font-size: 0.97rem; flex: 1; }
+
+  .finding-header .chapter-tag {
+    flex-shrink: 0;
+    font-size: 0.72rem;
+    color: var(--muted);
+    background: var(--surface2);
+    padding: 0.2em 0.6em;
+    border-radius: 4px;
+    font-family: monospace;
+    white-space: nowrap;
+  }
+
+  .finding-body { padding: 1rem 1.2rem; }
+
+  .finding-body .type-tag {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.15em 0.55em;
+    border-radius: 4px;
+    margin-bottom: 0.6rem;
+  }
+
+  .type-flow     { background: #1a2a35; color: #7ecfff; }
+  .type-complete { background: #1a2d1a; color: #7eff9e; }
+  .type-bug      { background: #2d1a1a; color: #ff9e7e; }
+  .type-struct   { background: #2a1a2d; color: #c57eff; }
+  .type-inconsist{ background: #2d2a1a; color: #ffe07e; }
+
+  .finding-body p { font-size: 0.9rem; color: var(--text); line-height: 1.6; }
+  .finding-body p + p { margin-top: 0.6rem; }
+
+  .finding-body .recommendation {
+    margin-top: 0.8rem;
+    padding: 0.65rem 0.9rem;
+    background: var(--surface2);
+    border-left: 3px solid var(--border);
+    border-radius: 0 4px 4px 0;
+    font-size: 0.86rem;
+    color: var(--muted);
+  }
+
+  .finding-body .recommendation strong { color: var(--text); }
+
+  .finding.critical { border-left: 3px solid var(--critical); }
+  .finding.high     { border-left: 3px solid var(--high); }
+  .finding.medium   { border-left: 3px solid var(--medium); }
+  .finding.low      { border-left: 3px solid var(--low); }
+
+  .positives {
+    background: #0a1a0f;
+    border: 1px solid #1a4025;
+    border-radius: 8px;
+    padding: 1.4rem 1.6rem;
+    margin: 2.5rem 0;
+  }
+
+  .positives h3 { color: var(--positive); font-size: 0.95rem; margin-bottom: 0.9rem; }
+  .positives ul { list-style: none; padding: 0; }
+  .positives li { padding: 0.3rem 0; font-size: 0.88rem; color: var(--text); padding-left: 1.2rem; position: relative; }
+  .positives li::before { content: '✓'; position: absolute; left: 0; color: var(--positive); font-weight: 700; }
+
+  footer {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.82rem;
+    text-align: center;
+  }
+
+  @media (max-width: 600px) {
+    .summary-grid { grid-template-columns: repeat(2, 1fr); }
+    .finding-header { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>Book Review: Deploying OpenClaw with Windows 365</h1>
+    <div class="subtitle">Flow &amp; Completeness Review — Findings Ranked by Severity</div>
+    <div class="meta">
+      <span>Reviewer: Claude Code (claude-sonnet-4-6)</span>
+      <span>Date: 2026-05-31</span>
+      <span>Chapters reviewed: 1–10, 12–41, Appendix (Chapter 11 absent)</span>
+    </div>
+  </header>
+
+  <div class="summary-grid">
+    <div class="summary-card critical"><div class="count">2</div><div class="label">Critical</div></div>
+    <div class="summary-card high"><div class="count">4</div><div class="label">High</div></div>
+    <div class="summary-card medium"><div class="count">10</div><div class="label">Medium</div></div>
+    <div class="summary-card low"><div class="count">9</div><div class="label">Low</div></div>
+  </div>
+
+  <!-- ═══════════════════════════════ CRITICAL ═══════════════════════════════ -->
+  <div class="section-header">
+    <span class="badge critical">Critical</span>
+    <h2>Must fix before publication — functional correctness or content gaps that block readers</h2>
+  </div>
+
+  <div class="finding critical">
+    <div class="finding-header">
+      <span class="number">C-1</span>
+      <span class="title">Chapter 11 is missing — unexplained gap in the build pipeline narrative</span>
+      <span class="chapter-tag">Ch11 / TOC</span>
+    </div>
+    <div class="finding-body">
+      <span class="type-tag type-complete">Completeness</span>
+      <p>The README table of contents lists "Chapter 11: Reserved for future content" with no explanation of what was supposed to be there. The chapter file does not exist. The build pipeline narrative flows directly from Phase 3 configuration (Ch10) to Windows Update and Sysprep (Ch12) with a one-chapter gap in sequence. Chapter 12 correctly references Chapter 10 as the Phase 3 chapter, so there is no broken cross-reference — but every reader will notice the gap and wonder whether content is simply missing.</p>
+      <p>The gap lands between the most implementation-dense section of the book (the build pipeline) and the Windows Update chapter. A natural subject for Ch11 would be Phase 4 (build validation or pre-Sysprep testing), agent-specific image optimisation, or a first-look at the AIB customizer log — all of which are discussed only briefly or by reference in other chapters.</p>
+      <div class="recommendation"><strong>Recommendation:</strong> Either write the chapter or replace "Reserved for future content" with a clear note explaining the gap (e.g., "planned for a future edition: …"). As-is, readers treating this as a complete guide will assume they are missing steps.</div>
+    </div>
+  </div>
+
+  <div class="finding critical">
+    <div class="finding-header">
+      <span class="number">C-2</span>
+      <span class="title">VS Code installer URL bug is documented but left unfixed in the book's code</span>
+      <span class="chapter-tag">Ch09</span>
+    </div>
+    <div class="finding-body">
+      <span class="type-tag type-bug">Known Bug</span>
+      <p>Chapter 9 explicitly calls out a "Known Bug" in the Phase 2 build script: the VS Code download URL uses the <code>win32-x64</code> variant (user installer) instead of <code>win32-x64-system</code> (system installer). For a Windows 365 multi-user / VDI environment, the system installer is mandatory — it installs VS Code to <code>Program Files</code>, is available to all users, and does not self-update per-user. The user installer installs into <code>AppData</code>, which breaks Silent Install behaviour and causes extension conflicts under Active Setup.</p>
+      <p>The bug is acknowledged in a callout box and never corrected in the code listing beneath it. Any reader who copies the script will provision Cloud PCs with the wrong VS Code variant. This is a functional breakage on every image build, not a theoretical risk.</p>
+      <div class="recommendation"><strong>Recommendation:</strong> Fix the URL in the code listing to use <code>win32-x64-system</code> and remove the Known Bug callout. The callout is appropriate only if the correct URL is pending confirmation — if the correct URL is known (it is), the fix should be in the code.</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════ HIGH ═══════════════════════════════ -->
+  <div class="section-header">
+    <span class="badge high">High</span>
+    <h2>Significant issues — structural confusion or prominent gaps that will frustrate readers</h2>
+  </div>
+
+  <div class="finding high">
+    <div class="finding-header">
+      <span class="number">H-1</span>
+      <span class="title">Chapter 41 (Disaster Recovery) is listed in Part IV but numbered and placed last in the book</span>
+      <span class="chapter-tag">Ch41 / TOC / README</span>
+    </div>
+    <div class="finding-body">
+      <span class="type-tag type-struct">Structure</span>
+      <p>The README table of contents places Chapter 41 inside Part IV (Operations &amp; Lifecycle), logically between the CI/CD pipeline chapter and the first-login chapter. However, the chapter file is numbered 41 and placed after all Part VII reference chapters (35–40). Part IV jumps from Chapter 21 to Chapter 22 in the TOC without Chapter 41 at that position, while the file system shows it at the end.</p>
+      <p>The effect is that any reader following the TOC will expect DR content after the CI/CD chapter and before the first-login experience, but the actual file is well over 20 chapters later. This creates navigation confusion and breaks the implied reading order for Operations.</p>
+      <div class="recommendation"><strong>Recommendation:</strong> Either renumber Ch41 to Ch22 (and shift subsequent chapter numbers) to match its logical position, or move it to the end of Part IV in the TOC. The current state looks like it was added late and not renumbered.</div>
+    </div>
+  </div>
+
+  <div class="finding high">
+    <div class="finding-header">
+      <span class="number">H-2</span>
+      <span class="title">Part VI (Security) jumps from Ch33 to Ch38 — chapters 34–37 are Part VII but cross-section references treat them as if they follow sequentially</span>
+      <span class="chapter-tag">TOC / Parts VI–VII</span>
+    </div>
+    <div class="finding-body">
+      <span class="type-tag type-struct">Structure</span>
+      <p>In the README TOC, Part VI (Security) ends at Chapter 33 (Monitoring and Forensics). Part VII (Reference) begins at Chapter 34. However, the chapter numbering continues linearly (34, 35, 36, 37, 38…) with no visual break, and multiple security chapters (Ch38 Purview, Ch39 Secrets, Ch40 Decentralized Identity) are numbered 38–40, placing them after the reference chapters in sequence even though they are logically security content. Readers scanning the TOC see a 5-chapter gap between Ch33 and Ch38 with reference material in between.</p>
+      <p>Chapter 33 also has no "continue to Part VII" signpost, so readers finishing the security section have no indication that chapters 34–37 are reference material, not further security chapters.</p>
+      <div class="recommendation"><strong>Recommendation:</strong> Add part-transition headings to the TOC listing and consider renumbering chapters 38–40 to follow Ch33 (making them Ch34–36 in the security part), then renumbering the current 34–37 reference chapters to 37–40 or into a separate appendix block. At minimum, add visual breaks in the README TOC between parts.</div>
+    </div>
+  </div>
+
+  <div class="finding high">
+    <div class="finding-header">
+      <span class="number">H-3</span>
+      <span class="title">Chapter 40 (Decentralized Identity / x402) is explicitly non-actionable today but positioned as a current security chapter</span>
+      <span class="chapter-tag">Ch40</span>
+    </div>
+    <div class="finding-body">
+      <span class="type-tag type-complete">Completeness / Placement</span>
+      <p>Chapter 40 opens with the explicit warning: "Read this chapter as a reference architecture and a build roadmap — a specification of what to build and in what order — not as a configuration guide for features you can enable today." No production-ready x402 plugin, wallet plugin, or decentralised identity plugin ships with OpenClaw as of publication. The entire chapter describes future work.</p>
+      <p>Placing this chapter in the Security section (Part VI) alongside chapters on concrete controls (Purview DLP, secrets management) creates a false impression that these capabilities are deployable. Readers who do not catch the opening caveat may attempt to follow the implementation roadmap and discover none of the dependencies exist yet. The chapter is well-written as a reference, but its placement misrepresents the book's scope.</p>
+      <div class="recommendation"><strong>Recommendation:</strong> Move Chapter 40 to a "Future Directions" or "Emerging Patterns" appendix section with a clear label. Alternatively, add a prominent callout at the top of the chapter and in the TOC entry indicating that this is a forward-looking architecture chapter, not a deployment guide.</div>
+    </div>
+  </div>
+
+  <div class="finding high">
+    <div class="finding-header">
+      <span class="number">H-4</span>
+      <span class="title">Both appendix sections in the README TOC link to the same file — appears to be two missing separate files</span>
+      <span class="chapter-tag">README / Appendix</span>
+    </div>
+    <div class="finding-body">
+      <span class="type-tag type-struct">Structure</span>
+      <p>The README table of contents lists two appendix entries: "Appendix: Operational Quick Reference" and "Appendix: Feedback and Errata," both linking to <code>./chapters/appendix.md</code>. The single appendix file does contain both sections. However, the double-listing with separate TOC entries implies the author intended these to be separate files. The current state means clicking either TOC link opens the same page, which confuses readers expecting distinct destinations.</p>
+      <p>Additionally, the appendix itself is thin for a 40+ chapter technical book — just a one-page quick reference (five command blocks) and a brief errata section. Given the book's scope, readers may expect a more comprehensive operational reference.</p>
+      <div class="recommendation"><strong>Recommendation:</strong> Either consolidate the two TOC entries into one (e.g., "Appendix: Quick Reference &amp; Errata") or split the file into two separate appendix files. Expand the quick reference to include the most-referenced commands and settings from throughout the book.</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════ MEDIUM ═══════════════════════════════ -->
+  <div class="section-header">
+    <span class="badge medium">Medium</span>
+    <h2>Notable gaps and inconsistencies — will create confusion or wasted effort for readers</h2>
+  </div>
+
+  <div class="finding medium">
+    <div class="finding-header">
+      <span class="number">M-1</span>
+      <span class="title">Cross-reference error: Ch03 says OpenSpec is "introduced in Chapter 9" — it is not</span>
+      <span class="chapter-tag">Ch03 / Ch09</span>
+    </div>
+    <div class="finding-body">
+      <span class="type-tag type-inconsist">Inconsistency</span>
+      <p>The Chapter 3 Responsibility Matrix includes an inline parenthetical: "(OpenSpec — a declarative agent configuration format; introduced in Chapter 9)." Chapter 9 (Phase 2 Developer Tools) covers VS Code, Git, GitHub Desktop, Azure CLI, and GitHub Copilot extensions. OpenSpec does not appear in Chapter 9 at all. It is first described substantively in Chapter 10 (Phase 3 Configuration and Policy) and its update lifecycle is covered in Chapter 25 (Agent Updates Without Reprovisioning).</p>
+      <p>Readers following this reference will reach Chapter 9, find no mention of OpenSpec, and either assume the reference is wrong or that they missed something.</p>
+      <div class="recommendation"><strong>Recommendation:</strong> Change the cross-reference in Ch03 from "Chapter 9" to "Chapter 10" where OpenSpec is actually introduced.</div>
+    </div>
+  </div>
+
+  <div class="finding medium">
+    <div class="finding-header">
+      <span class="number">M-2</span>
+      <span class="title">Contradictory guidance on <code>openclaw onboard</code>: Ch22 says skip it, Ch34 uses it as a diagnostic</span>
+      <span class="chapter-tag">Ch22 / Ch34</span>
+    </div>
+    <div class="finding-body">
+      <span class="type-tag type-inconsist">Inconsistency</span>
+      <p>Chapter 22 (First Login Experience) explicitly states that developers do <em>not</em> need to run <code>openclaw onboard</code> because the Active Setup hydration script handles workspace initialisation automatically. Chapter 34 (Troubleshooting FAQ) lists <code>openclaw onboard</code> as a diagnostic step for troubleshooting agent startup failures, with no caveat that the hydration script should have already run it.</p>
+      <p>This contradiction leaves readers unsure: Is <code>openclaw onboard</code> idempotent? Is it safe to run it manually after hydration? Does running it twice break anything? The chapters give no guidance on these questions.</p>
+      <div class="recommendation"><strong>Recommendation:</strong> Add a note to Ch34 clarifying that <code>openclaw onboard</code> is safe to run manually (assuming it is idempotent), and note that it is normally handled by hydration. Alternatively, add a note to Ch22 explaining that <code>openclaw onboard</code> is available as a manual recovery command.</div>
+    </div>
+  </div>
+
+  <div class="finding medium">
+    <div class="finding-header">
+      <span class="number">M-3</span>
+      <span class="title">MCP config path confusion: Ch34 references <code>claude_desktop_config.json</code> but the book uses <code>mcporter.json</code> throughout</span>
+      <span class="chapter-tag">Ch34 / Ch10 / Ch24</span>
+    </div>
+    <div class="finding-body">
+      <span class="type-tag type-inconsist">Inconsistency</span>
+      <p>Chapter 34's troubleshooting section references <code>%APPDATA%\Claude\claude_desktop_config.json</code> as an MCP configuration path. The rest of the book (Chapters 10, 24, 25) consistently uses <code>mcporter.json</code> within OpenClaw's configuration directory as the MCP server configuration mechanism. These are different files for different systems: <code>claude_desktop_config.json</code> is the Claude Desktop standalone app config, while <code>mcporter.json</code> is the OpenClaw-specific MCP registry.</p>
+      <p>Readers troubleshooting MCP issues will check the wrong file if they follow Ch34. The Claude Desktop config path is irrelevant in a deployment that uses OpenClaw as the MCP host.</p>
+      <div class="recommendation"><strong>Recommendation:</strong> Remove or clearly contextualise the <code>claude_desktop_config.json</code> reference in Ch34. If Claude Desktop is being used alongside OpenClaw in some scenarios, add a note explaining the distinction. Otherwise, replace with the correct <code>mcporter.json</code> path.</div>
+    </div>
+  </div>
+
+  <div class="finding medium">
+    <div class="finding-header">
+      <span class="number">M-4</span>
+      <span class="title">Ch38 notes PowerShell 7 is unsupported by the Information Protection client — but the entire book uses PS7</span>
+      <span class="chapter-tag">Ch38</span>
+    </div>
+    <div class="finding-body">
+      <span class="type-tag type-complete">Completeness</span>
+      <p>Chapter 38 (Microsoft Purview) includes a limitations table stating: "PowerShell 7 unsupported — The Information Protection client does not support PowerShell 7. Use PowerShell 5.1 for any automation that calls the <code>AIPService</code> or <code>PurviewInformationProtection</code> modules." Every other chapter in the book uses PowerShell 7 as the default shell. The build scripts, Intune scripts, and diagnostic commands throughout the book all target PS7.</p>
+      <p>This creates a practical gap: if an admin needs to automate Purview classification or labeling as part of the agent deployment, they must maintain a separate PS5.1 context — but the book gives no guidance on how to bridge this. The limitation is mentioned once in a table footnote and never addressed operationally.</p>
+      <div class="recommendation"><strong>Recommendation:</strong> Add a callout box to Ch38 and a note to the PS7-heavy chapters (Ch35 scripts chapter especially) explaining that Purview automation requires PS5.1 and how to invoke <code>powershell.exe -v 5</code> from within a PS7 workflow when needed.</div>
+    </div>
+  </div>
+
+  <div class="finding medium">
+    <div class="finding-header">
+      <span class="number">M-5</span>
+      <span class="title">Ch39 assumes managed identity auth for Key Vault — Windows 365 Cloud PCs have no system-assigned MI by default</span>
+      <span class="chapter-tag">Ch39</span>
+    </div>
+    <div class="finding-body">
+      <span class="type-tag type-complete">Completeness</span>
+      <p>Chapter 39's Key Vault integration section recommends: "The Cloud PC or VM should have a managed identity assigned and granted Key Vault Secrets User on the vault; the <code>az</code> CLI will pick up managed identity credentials automatically." Unlike Azure VMs, Windows 365 Cloud PCs do not support system-assigned managed identities — they are not VMs the operator controls at the ARM level. A user-assigned managed identity can be attached indirectly, but the mechanism for doing so with Windows 365 Cloud PCs is non-trivial and platform-specific.</p>
+      <p>Readers who follow this guidance for their Windows 365 fleet will find that <code>az login --identity</code> fails because no identity is attached. The fallback is interactive <code>az login</code> or a service principal with client secret — neither is production-appropriate for automated scenarios. The gap between the instruction and the actual Windows 365 constraint is significant.</p>
+      <div class="recommendation"><strong>Recommendation:</strong> Add explicit guidance on the Windows 365-specific path to managed identity: either using a secondary user account with federated credentials, or using Azure AD-registered app credentials stored in Key Vault itself. Alternatively, recommend <code>az login</code> as the developer workstation path with a clear note that production fleet Key Vault auth requires a different approach on Windows 365 vs. Azure VMs.</div>
+    </div>
+  </div>
+
+  <div class="finding medium">
+    <div class="finding-header">
+      <span class="number">M-6</span>
+      <span class="title">Ch33 buries a non-functional KQL query — the <code>AgentType</code> field in <code>SigninLogs</code> does not exist</span>
+      <span class="chapter-tag">Ch33</span>
+    </div>
+    <div class="finding-body">
+      <span class="type-tag type-bug">Bug / Accuracy</span>
+      <p>Chapter 33 (Monitoring and Forensics) includes a KQL query that filters <code>SigninLogs</code> on an <code>AgentType</code> field for detecting Entra Agent ID sign-in anomalies. The chapter itself acknowledges inline that this field "does not exist in the current <code>SigninLogs</code> schema." The acknowledgement is buried in prose between two code blocks, making it easy to miss.</p>
+      <p>Readers who copy-paste and run this KQL query in Microsoft Sentinel or Log Analytics will receive zero results and assume their environment is not generating agent sign-in events — when in reality the query is simply querying a non-existent field. This false negative is operationally dangerous in a security monitoring context.</p>
+      <div class="recommendation"><strong>Recommendation:</strong> Either remove the non-functional query entirely and note that the schema field is not yet available, or replace it with a working query using currently-available fields (such as <code>UserPrincipalName</code> patterns matching the agent naming convention) with a note that the dedicated <code>AgentType</code> field is expected in a future schema update. This should be a prominent callout box, not an inline acknowledgement.</div>
+    </div>
+  </div>
+
+  <div class="finding medium">
+    <div class="finding-header">
+      <span class="number">M-7</span>
+      <span class="title">Ch25 detection script hardcodes version numbers that become stale immediately</span>
+      <span class="chapter-tag">Ch25</span>
+    </div>
+    <div class="finding-body">
+      <span class="type-tag type-complete">Completeness</span>
+      <p>The Intune detection script in Chapter 25 hardcodes <code>openclaw = "2026.2.14"</code>, <code>claude = "2.1.42"</code>, <code>codex = "0.101.0"</code>, and <code>openspec = "0.9.1"</code> as expected version strings. These specific version numbers will be outdated by the time most readers deploy. The chapter gives no guidance on how to keep the detection script in sync with the Intune Win32 payload versions, nor does it recommend parameterizing the version strings or reading them from a configuration source.</p>
+      <p>The chapter recommends exact-version pinning (correctly) but does not address the operational question of how to update detection scripts when version pins change — leaving readers to discover this operationally.</p>
+      <div class="recommendation"><strong>Recommendation:</strong> Add a note explaining that the version constants in the detection script must match the pinned versions in the Intune payload, and suggest storing the version string in the Intune app's command-line argument so the same detection script can be reused across version updates without modification.</div>
+    </div>
+  </div>
+
+  <div class="finding medium">
+    <div class="finding-header">
+      <span class="number">M-8</span>
+      <span class="title">OneDrive Known Folder Move is required for DR failover but not mentioned in first-login or Intune chapters</span>
+      <span class="chapter-tag">Ch41 / Ch22 / Ch32</span>
+    </div>
+    <div class="finding-body">
+      <span class="type-tag type-complete">Completeness</span>
+      <p>Chapter 41 (Disaster Recovery) lists "OneDrive Known Folder Move enabled for all users" as a DR readiness prerequisite and explains that only OneDrive-backed files are preserved across failover. This is a critical operational dependency: if Known Folder Move is not configured, users lose anything on their Desktop, Documents, or Pictures during a regional outage. However, Chapters 22 (First Login) and Chapter 32 (Intune Configuration Profiles) — the natural locations for this configuration — do not mention it.</p>
+      <p>The result is that a reader who deploys the book without reading Chapter 41 will have a fleet without Known Folder Move configured, which they will only discover is a gap when they read the DR chapter — or worse, during an actual outage.</p>
+      <div class="recommendation"><strong>Recommendation:</strong> Add OneDrive Known Folder Move configuration (via Intune Settings Catalog policy) to Chapter 32 or Chapter 22, with a forward reference to Chapter 41 explaining why it matters for DR. This is a standard Windows 365 best practice that belongs in the provisioning/configuration section, not only the DR chapter.</div>
+    </div>
+  </div>
+
+  <div class="finding medium">
+    <div class="finding-header">
+      <span class="number">M-9</span>
+      <span class="title">Chapter 32 (Intune Configuration Profiles) is thin — primarily cross-references without substantive content</span>
+      <span class="chapter-tag">Ch32</span>
+    </div>
+    <div class="finding-body">
+      <span class="type-tag type-complete">Completeness</span>
+      <p>Chapter 32 is notably shorter and less substantive than surrounding chapters. It covers three policy ring profiles (Standard, Developer, Admin) and OMA-URI settings, but most of the substantive guidance is deferred to other chapters via cross-references. The chapter does not fully document the Settings Catalog policies required for a complete deployment — readers must assemble the complete configuration from references scattered across Chapters 10, 24, 28, 29, 31, and 33.</p>
+      <p>There is no consolidated table of all recommended Intune policies for this deployment, making Chapter 32 an incomplete reference for administrators configuring the tenant from scratch.</p>
+      <div class="recommendation"><strong>Recommendation:</strong> Add a consolidated policy inventory table listing every Intune Settings Catalog setting, OMA-URI, Platform Script, and Compliance Policy recommended across the entire book, with chapter references for each. Chapter 32 should be the single authoritative source for "what Intune policies do I need?" even if the detailed rationale lives elsewhere.</div>
+    </div>
+  </div>
+
+  <div class="finding medium">
+    <div class="finding-header">
+      <span class="number">M-10</span>
+      <span class="title">Ch13 component matrix omits SHA256 source for PowerShell 7 despite listing it as a pinned, verified component</span>
+      <span class="chapter-tag">Ch13 / Ch37</span>
+    </div>
+    <div class="finding-body">
+      <span class="type-tag type-inconsist">Inconsistency</span>
+      <p>Chapter 13's "How to Obtain Checksums" table lists SHA256 sources for Node.js, Python, Git, and Azure CLI, but PowerShell 7 (despite being in the same table as a pinned and verified component) lists only "GitHub release → <code>hashes.sha256</code> asset" — which is the file name, not the URL pattern. Chapter 37's Component Summary Matrix lists PowerShell 7.4.13 as a pinned component with a SHA256 verification requirement (<code>pwsh_sha256</code> Terraform variable) but does not link to the hash source.</p>
+      <p>Readers who need to bump the PowerShell version will find the Node.js and Azure CLI checksum sources fully specified but must go hunting for the PowerShell equivalent.</p>
+      <div class="recommendation"><strong>Recommendation:</strong> Add a complete URL pattern for the PowerShell 7 hash file to Ch13's table, e.g., <code>https://github.com/PowerShell/PowerShell/releases/download/v7.4.x/hashes.sha256</code>. Match the detail level already provided for Node.js.</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════ LOW ═══════════════════════════════ -->
+  <div class="section-header">
+    <span class="badge low">Low</span>
+    <h2>Minor issues — polish items, missing cross-references, and cosmetic improvements</h2>
+  </div>
+
+  <div class="finding low">
+    <div class="finding-header">
+      <span class="number">L-1</span>
+      <span class="title">Appendix is too thin for a 40-chapter book — quick reference is only five command blocks</span>
+      <span class="chapter-tag">Appendix</span>
+    </div>
+    <div class="finding-body">
+      <span class="type-tag type-complete">Completeness</span>
+      <p>The appendix contains five short command blocks (Build, Version Bump, Hotfix, Update Agents, Verify Image, Cleanup) and a brief errata section. Given the book's scope — 40+ chapters covering Terraform, Intune, Entra ID, multiple agents, monitoring, DR, and security — the appendix falls short of its operational quick-reference promise. A reader who needs to remember the Sysprep constraints, the key Sysmon event IDs, the minimum RBAC assignments, or the CVE table will have to go back to specific chapters.</p>
+      <div class="recommendation"><strong>Recommendation:</strong> Expand the appendix to include: a CVE reference table (consolidated from Chs 28, 29), a required Azure role assignments table (from Ch05), Terraform variable reference, the complete Sysmon event monitoring table (from Ch33), and a first-deployment checklist linking to each chapter. The appendix should function as a standalone reference after the book has been read.</div>
+    </div>
+  </div>
+
+  <div class="finding low">
+    <div class="finding-header">
+      <span class="number">L-2</span>
+      <span class="title">Ch41 recommends pre-push hooks for agent workflows but provides no example</span>
+      <span class="chapter-tag">Ch41</span>
+    </div>
+    <div class="finding-body">
+      <span class="type-tag type-complete">Completeness</span>
+      <p>Chapter 41 recommends "pre-push hooks that checkpoint agent context to a remote-backed location before each push" as a DR mitigation for uncommitted agent work lost during regional outages. Unlike almost every other recommendation in the book, no example code is provided. The pattern of providing concrete PowerShell or Git hook examples is well-established in previous chapters; the omission here is jarring.</p>
+      <div class="recommendation"><strong>Recommendation:</strong> Add a minimal example <code>.git/hooks/pre-push</code> script that copies the OpenClaw session state or relevant agent workspace files to an OneDrive-backed path before pushing, consistent with the book's convention of providing working code for every recommendation.</div>
+    </div>
+  </div>
+
+  <div class="finding low">
+    <div class="finding-header">
+      <span class="number">L-3</span>
+      <span class="title">Chapter 40 blockchain standards table lacks external links or references for readers new to the space</span>
+      <span class="chapter-tag">Ch40</span>
+    </div>
+    <div class="finding-body">
+      <span class="type-tag type-complete">Completeness</span>
+      <p>Chapter 40 opens with a table of eight blockchain/cryptographic standards (CAIP-2, CAIP-10, CAIP-122, CAIP-74/CACAO, ERC-4337, ERC-1271, EIP-712, EAS, SIWX). None of the entries include URLs or canonical sources. This is inconsistent with the book's treatment of other external standards, where links to official documentation are provided (OWASP, MITRE ATLAS, NIST, etc.). The standards table is the entry point for readers unfamiliar with the Web3/blockchain space, and the lack of references means readers must search for each standard independently.</p>
+      <div class="recommendation"><strong>Recommendation:</strong> Add a "Canonical Source" column to the standards table with links to the ChainAgnostic.org GitHub repository (for CAIP standards), the Ethereum EIP repository (for ERC/EIP standards), and the Ethereum Attestation Service documentation.</div>
+    </div>
+  </div>
+
+  <div class="finding low">
+    <div class="finding-header">
+      <span class="number">L-4</span>
+      <span class="title">Errata URL in appendix may not match the actual repository remote</span>
+      <span class="chapter-tag">Appendix</span>
+    </div>
+    <div class="finding-body">
+      <span class="type-tag type-inconsist">Inconsistency</span>
+      <p>The appendix instructs readers to file issues at <code>https://github.com/kkaminsk/W365ClawBook/issues</code>. The git configuration shows the author as "Kevin Kaminski MVP" with a commit history, but the repository remote URL should be verified against this hardcoded URL. A mismatch (e.g., organisation vs. personal namespace, or a different repo name) would send readers to a 404.</p>
+      <div class="recommendation"><strong>Recommendation:</strong> Verify the errata URL matches the actual repository remote URL before publication. Consider using a redirect or a canonical URL that can be updated without editing the book content.</div>
+    </div>
+  </div>
+
+  <div class="finding low">
+    <div class="finding-header">
+      <span class="number">L-5</span>
+      <span class="title">Tense inconsistency for GA features — some chapters use future tense for Microsoft Agent 365 which is GA May 2026</span>
+      <span class="chapter-tag">Ch27 / Ch31 / Ch33</span>
+    </div>
+    <div class="finding-body">
+      <span class="type-tag type-inconsist">Inconsistency</span>
+      <p>Microsoft Agent 365 (GA May 1, 2026) is described with future tense in some chapters ("will provide," "is expected to") and present tense in others ("provides," "is"). Given the review date of 2026-05-31, the product is generally available and the book's language should be consistent. The same inconsistency affects Entra Agent ID, which GA'd April 2026. Where the GA date was a future event when a chapter was drafted and not updated after GA, the reader experiences temporal confusion.</p>
+      <div class="recommendation"><strong>Recommendation:</strong> Do a final pass across Chapters 27, 31, 33, and 37 to normalize tense for features that have reached GA. Add GA dates parenthetically for clarity: "(GA: May 1, 2026)" or similar, as Chapter 27 already does in several places.</div>
+    </div>
+  </div>
+
+  <div class="finding low">
+    <div class="finding-header">
+      <span class="number">L-6</span>
+      <span class="title">Python 3.14 was pre-release at time of writing — this is not flagged prominently enough</span>
+      <span class="chapter-tag">Ch06 / Ch08 / Ch37</span>
+    </div>
+    <div class="finding-body">
+      <span class="type-tag type-complete">Completeness</span>
+      <p>Chapter 6 mentions briefly that Python 3.14 was "pre-release at time of writing." Chapters 8 and 37 treat it as a stable pinned version without qualification. Python 3.14.0 reached final release in October 2025; as of the review date it is stable. However, readers who built images during the pre-release window may have experienced unexpected behaviour, and any reader of an earlier draft of the book would have been deploying a pre-release Python into production images without adequate warning.</p>
+      <div class="recommendation"><strong>Recommendation:</strong> Update the note in Ch06 (or add a note to Ch08) confirming that 3.14.x is now stable, with the release date. Remove any "pre-release" language that has not been updated since the October 2025 release.</div>
+    </div>
+  </div>
+
+  <div class="finding low">
+    <div class="finding-header">
+      <span class="number">L-7</span>
+      <span class="title">Ch27 references the NIST AI Agent Standards Initiative without a URL</span>
+      <span class="chapter-tag">Ch27</span>
+    </div>
+    <div class="finding-body">
+      <span class="type-tag type-complete">Completeness</span>
+      <p>Chapter 27 mentions that the NIST AI Agent Standards Initiative "is ongoing as of publication." Unlike other external references in the book (OWASP, MITRE ATLAS, NSA advisories, Anthropic publications), no URL or document citation is provided for the NIST initiative. Readers who want to track its progress or cite it in their own documentation have no starting point.</p>
+      <div class="recommendation"><strong>Recommendation:</strong> Add a URL or NIST document reference. As of mid-2026, the relevant NIST work is likely under the AI RMF or SP 800-series. At minimum, point to <code>nist.gov/artificial-intelligence</code> as a starting point.</div>
+    </div>
+  </div>
+
+  <div class="finding low">
+    <div class="finding-header">
+      <span class="number">L-8</span>
+      <span class="title">Ch03 Responsibility Matrix has empty "Destination Path" cells for all runtime rows</span>
+      <span class="chapter-tag">Ch03</span>
+    </div>
+    <div class="finding-body">
+      <span class="type-tag type-complete">Completeness</span>
+      <p>The Chapter 3 Responsibility Matrix table includes a "Destination Path" column for components like Node.js, Python, PowerShell 7, Git, and Azure CLI. All cells in that column are empty for the runtime rows. The destination paths are documented later (Chapters 8 and 9), but readers seeing the matrix as an architecture overview document expect these to be filled in.</p>
+      <div class="recommendation"><strong>Recommendation:</strong> Populate the Destination Path cells in the Ch03 matrix with the actual installation paths (e.g., <code>C:\Program Files\nodejs\</code>, <code>C:\Python314\</code>), or explicitly note "See Chapter 8/9 for installation paths" to set expectations.</div>
+    </div>
+  </div>
+
+  <div class="finding low">
+    <div class="finding-header">
+      <span class="number">L-9</span>
+      <span class="title">Chapter 29 CVE table lacks CVSS severity scores — inconsistent with Ch28 which provides them</span>
+      <span class="chapter-tag">Ch29 / Ch28</span>
+    </div>
+    <div class="finding-body">
+      <span class="type-tag type-inconsist">Inconsistency</span>
+      <p>Chapter 28 (Hardening Claude Code) provides a CVE reference table with CVE IDs, descriptions, and impact ratings (Critical/High/Medium). Chapter 29 (Hardening OpenClaw) also provides a CVE table but without severity ratings — readers cannot quickly assess relative priority across the six CVEs listed. The CVE tables are clearly modelled on each other, and the missing severity column in Ch29 appears to be an oversight.</p>
+      <div class="recommendation"><strong>Recommendation:</strong> Add CVSS severity ratings (or at minimum a Critical/High/Medium/Low classification consistent with Ch28) to the Ch29 CVE table. This improves cross-chapter consistency and helps administrators prioritise remediation.</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════ POSITIVES ═══════════════════════════════ -->
+  <div class="positives">
+    <h3>Strengths Worth Preserving</h3>
+    <ul>
+      <li>Security coverage is exceptional — the ASTRIDE/OWASP/MITRE layering in Ch26 is genuinely industry-leading for a deployment guide at this level</li>
+      <li>Supply chain chapter (Ch13) is comprehensive and current, including the August 2025 Nx attack and AI-BOM model provenance controls</li>
+      <li>Every build-pipeline chapter (Ch08–Ch10) provides working, production-grade PowerShell with retry logic, hash verification, and rollback patterns</li>
+      <li>CVE tables in Ch28 and Ch29 are rare in deployment books and add significant operational value</li>
+      <li>Chapter 27 (Identity Architecture) handles Entra Agent ID, Conditional Access templates, and deprovisioning with unusual depth and accuracy</li>
+      <li>The "dormant and ready" philosophy (Ch03) is stated early, consistently reinforced, and correctly informs dozens of later decisions</li>
+      <li>Chapter 39 (Secrets Management) is the best practical treatment of OpenClaw's SecretRef model available, with correct Windows container caveats</li>
+      <li>Chapter 41 (DR) correctly models agent-specific concerns (Git push discipline, Key Vault reachability) that generic Windows 365 DR guidance misses</li>
+      <li>Cross-chapter consistency on tool versions, paths, and variable names is strong throughout the build pipeline sections</li>
+      <li>Mermaid diagrams are used effectively and consistently across architecture-heavy chapters</li>
+    </ul>
+  </div>
+
+  <footer>
+    Review generated by Claude Code (claude-sonnet-4-6) &mdash; 2026-05-31 &mdash; 25 findings across 2 Critical, 4 High, 10 Medium, 9 Low severity levels
+  </footer>
+
+</div>
+</body>
+</html>

@@ -46,7 +46,7 @@ When bumping a software version, obtain the SHA256 from the official release:
 |------|----------------|
 | Node.js | `https://nodejs.org/dist/v24.13.1/SHASUMS256.txt` |
 | Python | Release page -> Files -> SHA256 column |
-| PowerShell 7 | GitHub release -> `hashes.sha256` asset |
+| PowerShell 7 | `https://github.com/PowerShell/PowerShell/releases/download/v<version>/hashes.sha256` — e.g., for 7.4.13: `https://github.com/PowerShell/PowerShell/releases/download/v7.4.13/hashes.sha256` |
 | Git | GitHub release notes or compute from download (Computing checksums from your own download is a last resort; pre-computed hashes for Git for Windows are published on the project's GitHub Releases page.) |
 | Azure CLI | Microsoft docs for MSI releases |
 

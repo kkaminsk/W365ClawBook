@@ -63,7 +63,7 @@ This guide is accurate as of February 25, 2026. Microsoft services, marketplace 
   - [Chapter 8: Phase 1 -- Core Runtimes](./chapters/ch08-phase1-core-runtimes.md)
   - [Chapter 9: Phase 2 -- Developer Tools](./chapters/ch09-phase2-developer-tools.md)
   - [Chapter 10: Phase 3 -- Configuration and Policy](./chapters/ch10-phase3-configuration-policy.md)
-  - *(Chapter 11 is reserved for future content)*
+  - *(Chapter 11: Planned for a future edition — Phase 4 build validation and pre-Sysprep image testing. Readers should proceed directly to Chapter 12.)*
   - [Chapter 12: Windows Update and Sysprep](./chapters/ch12-windows-update-sysprep.md)
   - [Chapter 13: Supply Chain Integrity](./chapters/ch13-supply-chain-integrity.md)
 - [Part IV: Operations](./chapters/ch14-building-the-image.md)
@@ -92,15 +92,17 @@ This guide is accurate as of February 25, 2026. Microsoft services, marketplace 
   - [Chapter 33: Monitoring and Forensics](./chapters/ch33-monitoring-and-forensics.md)
   - [Chapter 38: Data Protection with Microsoft Purview](./chapters/ch38-purview-data-protection.md)
   - [Chapter 39: Secrets Management for Agent Deployments](./chapters/ch39-secrets-management.md)
-  - [Chapter 40: Decentralized Identity and Autonomous Payment Architecture](./chapters/ch40-decentralized-identity-payment-architecture.md)
+  - [Chapter 40: Decentralized Identity and Autonomous Payment Architecture](./chapters/ch40-decentralized-identity-payment-architecture.md) *(Forward-looking architecture — not a current deployment guide; see opening chapter caveat)*
+
+  > **Note on chapter numbering:** Chapters 38–40 are security chapters grouped here for logical continuity. Chapters 34–37 (Part VII: Reference) follow sequentially in the file system but are placed in a separate part because they are reference material rather than security configuration guides.
+
 - [Part VII: Reference](./chapters/ch34-troubleshooting-faq.md)
   - [Chapter 34: Troubleshooting and FAQ](./chapters/ch34-troubleshooting-faq.md)
   - [Chapter 35: PowerShell Scripts](./chapters/ch35-powershell-scripts.md)
   - [Chapter 36: Windows 365 Image Requirements Checklist](./chapters/ch36-image-requirements-checklist.md)
   - [Chapter 37: Component Summary Matrix](./chapters/ch37-component-summary-matrix.md)
 
-- [Appendix: Operational Quick Reference](./chapters/appendix.md)
-- [Appendix: Feedback and Errata](./chapters/appendix.md)
+- [Appendix: Quick Reference & Errata](./chapters/appendix.md)
 
 ---
 

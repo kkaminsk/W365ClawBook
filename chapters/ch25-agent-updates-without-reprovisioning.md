@@ -92,6 +92,8 @@ foreach ($k in $expected.Keys) {
 exit 0
 ```
 
+> **Important:** The version constants in the detection script (`openclaw = "2026.2.14"`, `claude = "2.1.42"`, etc.) must exactly match the pinned versions in the Intune Win32 app payload. When you bump the package version in Intune, you must update the detection script's expected values to match — otherwise Intune will re-install the package on every check-in. To avoid editing the detection script on every version bump, consider storing the expected version string in the Intune app's **Install command arguments** (e.g., `--version 2026.3.1`) and reading it via `$args[0]` inside the detection script. This allows the same detection script to work across version updates without modification.
+
 > **Note:** Machine-level environment variables set by Intune Platform Scripts are visible to all users on a given Cloud PC. For secrets that belong to a specific developer rather than the machine — such as personal API keys — use the user-context delivery pattern described in Chapter 23.
 
 ### Updating Skills

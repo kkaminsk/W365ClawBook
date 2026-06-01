@@ -25,14 +25,14 @@ OpenClaw must be treated as untrusted code execution running with persistent cre
 
 Before any configuration is applied, establish a minimum patched version baseline. OpenClaw's vulnerability history is the fastest-moving in this deployment:
 
-| CVE | CVSS | Description | Attack Vector | Patch Version |
-|---|---|---|---|---|
-| **CVE-2026-25253** | 8.8 | Auth token exfiltration via unvalidated `gatewayUrl` query parameter → RCE. Malicious webpage auto-connects to attacker server, leaking the gateway auth token in the WebSocket handshake. Token then used for full RCE. | Single web page visit | **2026.1.29** |
-| **CVE-2026-28472** (ClawJacked) | 8.5 | WebSocket device identity check bypass. Localhost connections exempt from rate limiting; brute-force of gateway password at hundreds of attempts per second with no lockout. Auto-pairing of localhost devices without user prompt. | JavaScript on any open webpage | **2026.2.25** |
-| **CVE-2026-22172** | 8.1 | WebSocket authorization bypass — crafted handshake headers bypassed origin validation added in 2026.1.29 | WebSocket handshake | **2026.2.8** |
-| **CVE-2026-32302** | 7.5 | Authentication bypass via malformed token replay | Gateway API | **2026.2.15** |
-| **CVE-2026-32922** | **9.9** | Critical privilege escalation — single API call converts a low-privilege pairing token into full administrative control with RCE capability. | Gateway API (authenticated low-privilege) | **2026.3.12** |
-| **CVE-2026-41349** | 8.3 | Agentic consent bypass — `config.patch` parameter disables execution approval for LLM agents, allowing remote attackers with low privileges to execute operations without any user approval prompt | Gateway API (authenticated low-privilege) | **2026.3.28** |
+| CVE | CVSS | Severity | Description | Attack Vector | Patch Version | Disclosed |
+|---|---|---|---|---|---|---|
+| **CVE-2026-25253** | 8.8 | High | Auth token exfiltration via unvalidated `gatewayUrl` query parameter → RCE. Malicious webpage auto-connects to attacker server, leaking the gateway auth token in the WebSocket handshake. Token then used for full RCE. | Single web page visit | **2026.1.29** | Jan 2026 |
+| **CVE-2026-28472** (ClawJacked) | 8.5 | High | WebSocket device identity check bypass. Localhost connections exempt from rate limiting; brute-force of gateway password at hundreds of attempts per second with no lockout. Auto-pairing of localhost devices without user prompt. | JavaScript on any open webpage | **2026.2.25** | Feb 2026 |
+| **CVE-2026-22172** | 8.1 | High | WebSocket authorization bypass — crafted handshake headers bypassed origin validation added in 2026.1.29 | WebSocket handshake | **2026.2.8** | Feb 2026 |
+| **CVE-2026-32302** | 7.5 | High | Authentication bypass via malformed token replay | Gateway API | **2026.2.15** | Feb 2026 |
+| **CVE-2026-32922** | **9.9** | **Critical** | Privilege escalation — single API call converts a low-privilege pairing token into full administrative control with RCE capability. | Gateway API (authenticated low-privilege) | **2026.3.12** | Mar 2026 |
+| **CVE-2026-41349** | 8.3 | High | Agentic consent bypass — `config.patch` parameter disables execution approval for LLM agents, allowing remote attackers with low privileges to execute operations without any user approval prompt | Gateway API (authenticated low-privilege) | **2026.3.28** | Mar 2026 |
 
 **Minimum required version for this deployment: 2026.3.28** (patches all known CVEs as of May 2026).
 

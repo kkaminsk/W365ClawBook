@@ -17,10 +17,10 @@ Any tool that expects a user context (WinGet's App Installer dependency, VS Code
 
 | Responsibility | Timing | Execution Context | Mechanism | Destination Path |
 |---|---|---|---|---|
-| Runtimes (Node.js, Python, PowerShell 7) | Image build | Local System | MSI/EXE silent installers | |
-| Developer tools (VS Code, Git, Azure CLI) | Image build | Local System | System installers with automation flags | |
+| Runtimes (Node.js, Python, PowerShell 7) | Image build | Local System | MSI/EXE silent installers | `C:\Program Files\nodejs\`, `C:\Python314\`, `C:\Program Files\PowerShell\7\` |
+| Developer tools (VS Code, Git, Azure CLI) | Image build | Local System | System installers with automation flags | `C:\Program Files\Microsoft VS Code\`, `C:\Program Files\Git\`, `C:\Program Files (x86)\Microsoft SDKs\Azure\CLI2\` |
 | AI agent binaries (OpenClaw, Claude Code, Codex) | Post-provisioning | User context | Intune Win32 app (required, per-user) | |
-| OpenSpec (OpenSpec — a declarative agent configuration format; introduced in Chapter 9) | Post-provisioning | User context | Intune Win32 app (required, per-user) | |
+| OpenSpec (OpenSpec — a declarative agent configuration format; introduced in Chapter 10) | Post-provisioning | User context | Intune Win32 app (required, per-user) | |
 | Enterprise policy (managed-settings.json) | Image build | Local System | File write to ProgramData | `C:\ProgramData\OpenClaw\config\managed-settings.json` |
 | Configuration templates | Image build | Local System | File write to ProgramData | `C:\ProgramData\OpenClaw\config\` |
 | Agent skills (curated) | Image build | Local System | File copy to ProgramData | `C:\ProgramData\OpenClaw\skills\` |

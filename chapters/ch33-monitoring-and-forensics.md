@@ -84,16 +84,19 @@ GET https://graph.microsoft.com/beta/auditLogs/signIns
 
 The Entra admin center also exposes filters for **Agent ID User**, **Agent Identity**, **Agent Identity Blueprint**, and **Not Agentic** across all four sign-in log types. This is materially richer than filtering by account name — the `agent/agentType` filter is driven by object type, not naming convention, and survives account renames.
 
-**Equivalent Sentinel KQL (when log source includes agentType field):**
+**Equivalent Sentinel KQL (working query using UPN naming convention):**
 
 ```kql
+// Filters by the agent account naming convention established in Chapter 27
+// (agent UPNs follow the pattern agent-<name>@<tenant>)
+// Replace the prefix pattern to match your naming convention
 SigninLogs
-| where AgentType == "AgentIdentity"
+| where UserPrincipalName startswith "agent-"
 | project TimeGenerated, UserPrincipalName, AppDisplayName, IPAddress, ResultType, ConditionalAccessStatus
 | order by TimeGenerated desc
 ```
 
-> **Note:** The `AgentType` field referenced in this query does not exist in the current `SigninLogs` schema. This query returns no results until Microsoft updates the Azure Monitor / Sentinel data connector. Monitor Microsoft Sentinel release notes for schema updates.
+> **⚠️ Warning — Schema field not yet available:** Microsoft documents an `agent/agentType` filter on the Graph sign-in logs API and an `AgentType` field in `SigninLogs`. As of publication, **this field does not exist in the `SigninLogs` schema** in Azure Monitor / Microsoft Sentinel. A query using `| where AgentType == "AgentIdentity"` returns zero results and creates a dangerous false negative in a security monitoring context. The working query above uses UPN prefix filtering as a reliable substitute until Microsoft ships the schema update. Monitor [Microsoft Sentinel release notes](https://learn.microsoft.com/azure/sentinel/whats-new) for the `AgentType` field addition.
 
 **Risky agent signals** — Microsoft Identity Protection exposes agent-specific risk surfaces in beta:
 

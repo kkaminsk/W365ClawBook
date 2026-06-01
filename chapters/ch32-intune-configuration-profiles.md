@@ -103,6 +103,32 @@ For automated verification of the full build and configuration baseline, see the
 
 ---
 
+### OneDrive Known Folder Move
+
+OneDrive Known Folder Move (KFM) redirects the Desktop, Documents, and Pictures folders to OneDrive, ensuring their contents survive Cloud PC reprovisioning and regional failover. **This is a mandatory configuration for any Windows 365 deployment, not an optional enhancement.** Without KFM, files saved to these locations are lost during a provisioning event or DR failover — see Chapter 41.
+
+Configure KFM via the Intune Settings Catalog:
+
+| Setting Path | Setting Name | Value |
+|---|---|---|
+| OneDrive | Silently sign in users to the OneDrive sync app with their Windows credentials | Enabled |
+| OneDrive | Silently move Windows known folders to OneDrive | Enabled — provide your Azure AD tenant ID |
+| OneDrive | Prevent users from redirecting their Windows known folders to their PC | Enabled |
+
+**Why "Prevent users from redirecting" matters:** This locks KFM in place. Without it, a developer can disable KFM from the OneDrive sync app settings and unknowingly remove their DR protection.
+
+Deploy this Settings Catalog profile to all Cloud PC device groups (Standard, Developer, and Admin rings). Verify KFM is active on a Cloud PC with:
+
+```powershell
+# Verify Desktop, Documents, Pictures are redirected to OneDrive
+Get-ItemProperty "HKCU:\Software\Microsoft\OneDrive\Accounts\Business1" |
+    Select-Object UserFolder, KfmFoldersProtected, KfmSilentOptInError
+```
+
+`KfmFoldersProtected` should be non-zero if KFM is active and enforced.
+
+---
+
 ### Agent 365 Policy Integration
 
 Microsoft Agent 365 (GA May 1, 2026) exposes Intune-compatible policies for governing locally running AI agents. For organizations licensed for Agent 365, these policies extend the manual Intune profiles in this chapter:
@@ -112,6 +138,52 @@ Microsoft Agent 365 (GA May 1, 2026) exposes Intune-compatible policies for gove
 - **Conditional Access integration:** Agent 365 contributes agent-specific risk signals to Entra Conditional Access, enabling access decisions based on detected agent behavior rather than only device compliance state
 
 Configure Agent 365 policies in **Endpoint security → Agent governance** within the Intune admin center, alongside the existing profiles described in this chapter.
+
+---
+
+### Complete Policy Inventory
+
+This table lists every Intune policy recommended across the book. Use it as a deployment checklist when configuring a new tenant from scratch. For rationale and detailed settings, follow the chapter references.
+
+| Policy | Type | Scope | Chapter |
+|---|---|---|---|
+| Windows Update for Business — quality deferral (7 days) | Settings Catalog | Standard, Developer, Admin | Ch32 |
+| Windows Update for Business — feature deferral (30 days) | Settings Catalog | Standard, Developer, Admin | Ch32 |
+| Telemetry restriction (Security/Basic only) | Settings Catalog | Standard, Developer, Admin | Ch32 |
+| WebClient service disable | Platform Script (System) | Standard, Developer, Admin | Ch32 |
+| Developer Mode enable | Settings Catalog | Developer, Admin | Ch32 |
+| PowerShell execution policy (RemoteSigned) | Settings Catalog | Developer, Admin | Ch32 |
+| WDAC base policy (Audit mode for Admin) | App Control | Admin | Ch31, Ch32 |
+| WDAC supplemental policy (Node.js / npm allowance) | App Control | Developer | Ch31, Ch32 |
+| OneDrive Known Folder Move — silent opt-in | Settings Catalog | Standard, Developer, Admin | Ch32, Ch41 |
+| OneDrive — prevent users from disabling KFM | Settings Catalog | Standard, Developer, Admin | Ch32, Ch41 |
+| Defender Antivirus — real-time protection | Settings Catalog | Standard, Developer, Admin | Ch31 |
+| Defender Antivirus — behavior monitoring | Settings Catalog | Standard, Developer, Admin | Ch31 |
+| Defender Antivirus — cloud-delivered protection | Settings Catalog | Standard, Developer, Admin | Ch31 |
+| Attack Surface Reduction rules | Settings Catalog | Standard, Developer, Admin | Ch31 |
+| Windows Firewall — domain / private / public profiles | Settings Catalog | Standard, Developer, Admin | Ch30 |
+| Windows Firewall outbound block — SMB (TCP 445) | Firewall rule | Standard, Developer, Admin | Ch30 |
+| Windows Firewall outbound block — NTLM (TCP 139) | Firewall rule | Standard, Developer, Admin | Ch30 |
+| DNS over HTTPS (DoH) | Settings Catalog | Standard, Developer, Admin | Ch30 |
+| OpenClaw gateway port (18789) — inbound block from external | Firewall rule | Standard, Developer, Admin | Ch29, Ch30 |
+| Anthropic API key delivery (ANTHROPIC_API_KEY) | Settings Catalog — env var | Standard, Developer, Admin | Ch23 |
+| Sysmon deployment and configuration | Platform Script (System) | Standard, Developer, Admin | Ch33 |
+| OpenClaw gateway watchdog scheduled task | Platform Script (System) | Standard, Developer, Admin | Ch33 |
+| VS Code extension deployment (post-provisioning) | Platform Script (User) | Developer, Admin | Ch24 |
+| OpenClaw update script | Platform Script (User) | Developer, Admin | Ch25 |
+| Claude Code update script | Platform Script (User) | Developer, Admin | Ch25 |
+| OpenClaw — Intune Win32 app (required) | Win32 App | Developer, Admin | Ch25 |
+| Claude Code — Intune Win32 app (required) | Win32 App | Developer, Admin | Ch25 |
+| Codex CLI — Intune Win32 app (required) | Win32 App | Developer, Admin | Ch25 |
+| OpenSpec — Intune Win32 app (required) | Win32 App | Developer, Admin | Ch25 |
+| MCP servers — Intune Win32 app (available) | Win32 App | Developer, Admin | Ch25 |
+| Device compliance — require BitLocker | Compliance Policy | Standard, Developer, Admin | Ch31 |
+| Device compliance — require Secure Boot | Compliance Policy | Standard, Developer, Admin | Ch31 |
+| Device compliance — minimum OS version | Compliance Policy | Standard, Developer, Admin | Ch31 |
+| Conditional Access — require compliant device (agent accounts) | Conditional Access | Agent account group | Ch27 |
+| Conditional Access — location-based fencing (agent accounts) | Conditional Access | Agent account group | Ch27 |
+| Agent 365 — agent deployment controls | Endpoint Security → Agent governance | Developer, Admin | Ch32 |
+| Agent 365 — MCP server allowlist | Endpoint Security → Agent governance | Developer, Admin | Ch32 |
 
 ---
 

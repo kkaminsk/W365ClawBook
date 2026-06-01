@@ -65,5 +65,15 @@ For **Claude Code**, the developer runs `claude login` to authenticate via Anthr
 
 API keys and MCP server credentials are configured manually, as discussed in Chapter 23.
 
+### OneDrive Known Folder Move
+
+OneDrive Known Folder Move (KFM) must be enabled for all users — this is a deployment requirement, not an optional enhancement. KFM redirects the Desktop, Documents, and Pictures folders to OneDrive, ensuring their contents survive Cloud PC reprovisioning and regional failover events.
+
+Without KFM, any files a developer saves to their Desktop or Documents folder will be lost during a reprovisioning or a DR failover. This is discovered too late — typically during an actual outage.
+
+KFM is configured via Intune Settings Catalog (see Chapter 32 for the exact policy). Once deployed, OneDrive silently syncs these folders in the background with no action required from the developer.
+
+> **Cross-reference:** Chapter 41 (Disaster Recovery) lists KFM as a mandatory DR readiness prerequisite. Configure it in Intune before provisioning Cloud PCs, not after.
+
 ---
 

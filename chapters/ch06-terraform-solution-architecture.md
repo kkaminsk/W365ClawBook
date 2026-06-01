@@ -146,7 +146,7 @@ The solution exposes over 30 variables, all with sensible defaults. The critical
 | `python_version` | `3.14.3` | Pinned Python version |
 | `source_image_version` | `26200.7840.260206` | Pinned Windows 11 25H2 marketplace image |
 
-Every software version is pinned to a specific release. **Note on `python_version`:** Python 3.14 was pre-release at time of writing. Verify the current stable release at python.org/downloads before setting this variable. The `source_image_version` variable includes a validation rule that rejects `"latest"`:
+Every software version is pinned to a specific release. **Note on `python_version`:** Python 3.14 reached final stable release in October 2025; 3.14.3 is the current stable patch as of publication. Verify the current stable release at [python.org/downloads](https://python.org/downloads) before bumping this variable. The `source_image_version` variable includes a validation rule that rejects `"latest"`:
 
 ```hcl
 variable "source_image_version" {

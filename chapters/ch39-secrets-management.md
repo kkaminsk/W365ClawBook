@@ -164,6 +164,15 @@ The recommended authentication flows, in order of preference:
 - **Service principal with client secret**: supported but discouraged in production; prefer certificate auth for applications.
 - **Developer interactive login (`az login`)**: acceptable locally; `DefaultAzureCredential` will fall through to this after exhausting managed identity and environment-based credential chains.
 
+> **⚠️ Windows 365 Cloud PC limitation — managed identities:** Unlike Azure VMs, **Windows 365 Cloud PCs do not support system-assigned managed identities**. They are provisioned and managed by the Windows 365 service, not by the operator at the ARM level, so you cannot attach an Azure managed identity to them directly. Running `az login --identity` on a Windows 365 Cloud PC will fail — there is no IMDS endpoint to provide a token.
+>
+> **Recommended path for Windows 365 fleets:**
+> - **Developer workstations:** Use `az login` (interactive browser flow) to authenticate per-developer. The `az` CLI caches the token in the Windows Credential Manager. This is appropriate for development workflows where a human is present.
+> - **Automated agent workflows:** Use a **service principal with certificate**, stored in the Windows certificate store with a TPM-backed non-exportable key (provisioned via Intune SCEP profile). This avoids storing a client secret anywhere on disk.
+> - **Alternative (advanced):** Attach a **user-assigned managed identity** to the Azure network connection (ANC) resource that backs the Windows 365 provisioning. This requires custom tooling and is not supported as a standard Windows 365 configuration at the time of publication.
+>
+> The guidance later in this chapter assumes an Azure VM or Azure VM Scale Set context where `az login --identity` works. If you are deploying to Windows 365 Cloud PCs, substitute `az login` (with cached credentials) or the service-principal-with-certificate pattern for every managed identity reference in the scripts below.
+
 **OpenClaw does not have a native Azure Key Vault secret provider.** The documented integration surface for Key Vault is the `exec` source in a `SecretRef` block. You provide an executable or script that receives a list of secret IDs from OpenClaw on stdin, fetches them from Key Vault, and returns a JSON response on stdout. OpenClaw calls this process at activation time.
 
 ```mermaid

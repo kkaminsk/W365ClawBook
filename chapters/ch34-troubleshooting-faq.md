@@ -61,7 +61,8 @@ az image builder show-runs --name "aib-w365-dev-ai-1-0-0" --resource-group "rg-w
 
 - Agent cannot access API keys: verify Intune settings catalog or environment variable deployment for the agent account. Check the deployed environment variables with `[System.Environment]::GetEnvironmentVariable('ANTHROPIC_API_KEY', 'Machine')`.
 - CLI commands fail: confirm Node.js and npm are installed system-wide and that global npm paths are in `PATH`. Run `node --version; npm --version; openclaw --version` in a new session to verify availability.
-- MCP servers not available: confirm global npm installs completed and the config template was hydrated (see Chapter 22) into the user profile. Check `%APPDATA%\Claude\claude_desktop_config.json` exists and contains the expected MCP server entries.
+- MCP servers not available: confirm global npm installs completed and the config template was hydrated (see Chapter 22) into the user profile. Check `%USERPROFILE%\.openclaw\workspace\config\mcporter.json` exists and contains the expected MCP server entries. Note: `mcporter.json` is OpenClaw's MCP server registry — it is distinct from `%APPDATA%\Claude\claude_desktop_config.json`, which is the standalone Claude Desktop application config and is not used in this deployment.
+- OpenClaw gateway fails to start after hydration or after reprovisioning: run `openclaw onboard` manually. This command is normally handled automatically by the Active Setup hydration script, but it is idempotent and safe to run again as a manual recovery step. It detects the existing configuration and re-initialises only missing components.
 
 ### Operations
 

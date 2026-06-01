@@ -22,8 +22,6 @@ if ($proc.ExitCode -ne 0) {
 }
 ```
 
-> **Known Issue:** The URL path must be `win32-x64-system` (System Installer), not `win32-x64` (User Installer). The W365Claw Terraform code currently uses `win32-x64` — this is a known bug that should be corrected to `win32-x64-system` before production builds. The User Installer places binaries in the Local System profile during the image build, making VS Code invisible to the actual developer.
-
 The critical argument is `/MERGETASKS="!runcode,addcontextmenufiles,addcontextmenufolders,addtopath"`:
 
 | Task | Purpose |
